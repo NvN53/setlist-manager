@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>SetDesk</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="assets/manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="apple-touch-icon" href="assets/icon-192.svg">
     <style>
         * { box-sizing: border-box; margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
         body { max-width:500px; margin:0 auto; padding:20px; background-color:#f5f5f5; color:#333; }
@@ -58,13 +61,13 @@
         .transpose-controls { display:flex; align-items:center; gap:10px; }
         .transpose-value { font-weight: bold; font-size: 1.1rem; min-width: 20px; text-align: center; }
         .transpose-btn { width:30px; height:30px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.6rem; }
-        .metronome-btn { background: none; border: none; cursor: pointer; padding: 2px; border-radius: 50%; transition: background-color 0.3s; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+        #metronome-toggle.btn.btn-secondary { background-color: #6c757d; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius: 4px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
         
-        body.dark-mode .metronome-btn { background: #ffffff; }
+        body.dark-mode #metronome-toggle.btn.btn-secondary { background-color: #444; color: #ffffff; border: none; }
         
-        body.dark-mode .metronome-btn.active { background: #007bff; }
-        .metronome-btn:hover { background-color: #e9ecef; }
-        .metronome-btn.active { background-color: #007bff; }
+        body.dark-mode #metronome-toggle.btn.btn-secondary.active { background: #007bff; color: white; border: 1px solid #007bff; }
+        #metronome-toggle.btn.btn-secondary:hover { background-color: #5a6268; }
+        #metronome-toggle.btn.btn-secondary.active { color: #007bff; border: 1px solid #007bff; background-color: transparent; }
         .lyrics-container { text-align:left; white-space: pre-wrap; margin:10px 0; padding:5px 0; font-size:1rem; line-height:1.2; font-family: 'Courier New', Courier, monospace; color: inherit; overflow-x: hidden; word-wrap: break-word; }
 
         .lyrics-container:lang(ml) { font-size: 0.9rem; }
@@ -102,7 +105,6 @@
         body.dark-mode .close-btn { 
             color: #fff; 
         }
-        .metronome-icon { width: 16px; height: 16px; display: block; }
         .hidden { display:none; }
         
         /* Settings page styles */
@@ -481,9 +483,7 @@
                 <div class="controls">
                     <button class="btn btn-secondary" id="ambient-btn" style="font-size: 0.8rem; padding: 5px 10px;">Ambient</button>
                     <div class="metronome-controls" style="display: flex; align-items: center; gap: 8px;">
-                        <button id="metronome-toggle" class="metronome-btn" style="width: 30px; height: 30px; padding: 2px;">
-                            <img src="metronome.png" alt="Metronome" class="metronome-icon" style="width: 16px; height: 16px;">
-                        </button>
+                        <button id="metronome-toggle" class="btn btn-secondary" style="font-size: 0.8rem; padding: 5px 10px; display: flex; align-items: center; justify-content: center;">Metronome</button>
                         <div style="display: flex; align-items: center; gap: 5px;">
                             <label style="font-size: 0.8rem; margin: 0;">Autoscroll:</label>
                             <button id="autoscroll-toggle" class="btn btn-secondary" style="font-size: 0.8rem; padding: 3px 8px; min-width: 40px;">Off</button>
@@ -601,13 +601,55 @@ let setlists = JSON.parse(localStorage.getItem('setlistManager_setlists')) || [
     { id: 2, title: 'Christmas Eve Mass', songIds: [2, 3] },
     { id: 3, title: 'Malayalam Choir Practice', songIds: [3, 1] }
 ];
+
+// Load metronome sound
+function loadMetronomeSound() {
+    const request = new XMLHttpRequest();
+    request.open('GET', 'assets/audio/metronome.wav', true);
+    request.responseType = 'arraybuffer';
+    
+    request.onload = function() {
+        if (!audioContext) {
+            console.warn('Audio context not available yet');
+            return;
+        }
+        
+        audioContext.decodeAudioData(request.response, function(buffer) {
+            metronomeBuffer = buffer;
+        }, function(error) {
+            console.error('Error decoding metronome sound:', error);
+        });
+    };
+    
+    request.onerror = function() {
+        console.error('Error loading metronome sound');
+    };
+    
+    request.send();
+}
+
+// Create audio context and load metronome sound on first user interaction
+let audioContextCreated = false;
+document.body.addEventListener('click', function initAudio() {
+    if (!audioContextCreated) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            loadMetronomeSound();
+            audioContextCreated = true;
+        } catch (e) {
+            console.error('Web Audio API is not supported in this browser', e);
+        }
+    }
+}, { once: true });
+
 let currentSong = null;
 let currentSetlist = null;
 let editingSongId = null;
 let editingSetlistId = null;
 let cameFromViewSetlist = false;
 let transposeValue = 0;
-
+let metronomeBuffer = null;
+ 
 /* ---------- elements ---------- */
 const homeSongsPage = document.getElementById('home-songs-page');
 const homeSetlistsPage = document.getElementById('home-setlists-page');
@@ -1803,10 +1845,12 @@ function duplicateSong() {
 }
 
 /* ---------- metronome ---------- */
-let metronomeInterval = null;
 let audioContext = null;
+let nextBeatTime = 0;
 let metronomeBeat = 0;
 let beatsPerMeasure = 4; // Default to 4/4 time
+let isPlaying = false;
+let scheduleTimer = null;
 
 function toggleMetronome() {
     const metronomeBtn = document.getElementById('metronome-toggle');
@@ -1856,23 +1900,24 @@ function startMetronome() {
     
     // Reset beat counter
     metronomeBeat = 0;
+    isPlaying = true;
     
-    // Calculate interval in milliseconds
-    const bpm = currentSong.bpm || 120;
-    const interval = 60000 / bpm; // 60 seconds * 1000 ms / BPM
+    // Set next beat time to now
+    nextBeatTime = audioContext.currentTime;
     
-    // Start the metronome
-    metronomeInterval = setInterval(playClick, interval);
+    // Start scheduling
+    scheduleBeats();
     
     return true;
 }
 
 function stopMetronome() {
-    if (metronomeInterval) {
-        clearInterval(metronomeInterval);
-        metronomeInterval = null;
-    }
+    isPlaying = false;
     metronomeBeat = 0;
+    if (scheduleTimer) {
+        clearTimeout(scheduleTimer);
+        scheduleTimer = null;
+    }
 }
 
 function parseTimeSignature() {
@@ -1890,85 +1935,93 @@ function parseTimeSignature() {
     }
 }
 
-function playClick() {
+function scheduleBeats() {
+    if (!isPlaying || !audioContext) return;
+    
+    const bpm = currentSong.bpm || 120;
+    const beatInterval = 60.0 / bpm; // Time between beats in seconds
+    
+    // Schedule beats 100-200ms in advance
+    const currentTime = audioContext.currentTime;
+    const scheduleAheadTime = 0.2; // 200ms lookahead
+    
+    // Schedule beats until we've filled the lookahead window
+    while (nextBeatTime < currentTime + scheduleAheadTime) {
+        scheduleClick(nextBeatTime, metronomeBeat);
+        
+        // Advance to next beat
+        nextBeatTime += beatInterval;
+        metronomeBeat = (metronomeBeat + 1) % beatsPerMeasure;
+    }
+    
+    // Schedule the next batch
+    scheduleTimer = setTimeout(scheduleBeats, 50); // Check every 50ms
+}
+
+function scheduleClick(beatTime, beatNumber) {
+    // Create the click sound to be played at the scheduled time
+    createClickSound(beatTime, beatNumber);
+}
+
+function createClickSound(beatTime, beatNumber) {
     if (!audioContext) return;
     
-    // Create high-definition foley recording simulation of hickory drumsticks
-    const sampleRate = audioContext.sampleRate;
-    const duration = 0.008; // 8ms for extremely sharp transient
-    const bufferSize = Math.ceil(sampleRate * duration);
-    const buffer = audioContext.createBuffer(1, bufferSize, sampleRate);
-    const data = buffer.getChannelData(0);
-    
-    // Generate ultra-sharp stick click with high-frequency resonance
-    for (let i = 0; i < bufferSize; i++) {
-        const t = i / sampleRate;
-        
-        // Extremely sharp transient attack
-        let attack = 0;
-        if (t < 0.0005) { // 0.5ms ultra-sharp attack
-            // Create sharp impulse with controlled harmonic content
-            attack = (1 - t * 2000) * Math.exp(-t * 5000);
-        }
-        
-        // High-frequency resonance (4kHz-6kHz range)
-        let resonance = 0;
-        if (t < 0.003) {
-            resonance = 0.4 * Math.exp(-t * 1200) * Math.sin(2 * Math.PI * 5000 * t);
-        }
-        
-        // Wood body fundamental
-        let woodBody = 0;
-        if (t < 0.005) {
-            woodBody = 0.3 * Math.exp(-t * 600) * Math.sin(2 * Math.PI * 800 * t);
-        }
-        
-        // Ultra-fast decay envelope for dry acoustic environment
-        const envelope = Math.exp(-t * 1500) * (1 + 0.2 * Math.sin(t * 3000));
-        
-        // Combine components for HD foley quality
-        data[i] = (attack + resonance + woodBody) * envelope;
+    // Load and play the metronome sound file
+    if (!metronomeBuffer) {
+        console.warn('Metronome sound not loaded yet');
+        // Try to create a fallback sound
+        createFallbackClick(beatTime, beatNumber);
+        return;
     }
     
     // Create audio nodes
     const source = audioContext.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = metronomeBuffer;
     
     const gainNode = audioContext.createGain();
     
-    // HD foley recording simulation filters
-    const highPass = audioContext.createBiquadFilter();
-    highPass.type = 'highpass';
-    highPass.frequency.value = 100; // Preserve low-end for wood body
-    
-    const lowPass = audioContext.createBiquadFilter();
-    lowPass.type = 'lowpass';
-    lowPass.frequency.value = 4500; // Control highs for crispness
-    
-    // Configure sound based on beat - SAME sound, only volume difference
-    if (metronomeBeat === 0) {
-        // Downbeat - only slightly louder
-        gainNode.gain.setValueAtTime(0.28, audioContext.currentTime);
+    // Configure sound based on beat - first beat slightly louder
+    if (beatNumber === 0) {
+        // Downbeat - slightly louder
+        gainNode.gain.setValueAtTime(0.28, beatTime);
     } else {
         // Other beats - standard volume
-        gainNode.gain.setValueAtTime(0.20, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.20, beatTime);
     }
     
-    // Ultra-fast decay envelope (8ms) - no sustain, studio dry
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.008);
-    
-    // Connect nodes: source -> highPass -> lowPass -> gain -> destination
-    source.connect(highPass);
-    highPass.connect(lowPass);
-    lowPass.connect(gainNode);
+    // Connect nodes: source -> gain -> destination
+    source.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    // Play the HD foley stick click
-    source.start();
-    source.stop(audioContext.currentTime + 0.008);
+    // Play the metronome sound at the scheduled time
+    source.start(beatTime);
+}
+
+function createFallbackClick(beatTime, beatNumber) {
+    // Create a simple click sound as fallback
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
     
-    // Advance beat counter
-    metronomeBeat = (metronomeBeat + 1) % beatsPerMeasure;
+    // Configure sound based on beat
+    if (beatNumber === 0) {
+        // Downbeat - lower frequency, louder
+        oscillator.frequency.setValueAtTime(880, beatTime);
+        gainNode.gain.setValueAtTime(0.15, beatTime);
+    } else {
+        // Other beats - higher frequency, quieter
+        oscillator.frequency.setValueAtTime(440, beatTime);
+        gainNode.gain.setValueAtTime(0.1, beatTime);
+    }
+    
+    // Quick decay
+    gainNode.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.05);
+    
+    // Connect and play
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start(beatTime);
+    oscillator.stop(beatTime + 0.05);
 }
 </script>
 </body>

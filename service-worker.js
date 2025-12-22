@@ -2,7 +2,7 @@ const CACHE_NAME = 'setlist-manager-v1';
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json'
+  './assets/manifest.json'
 ];
 
 // Install event - cache files
