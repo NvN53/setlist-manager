@@ -141,6 +141,20 @@
             z-index: 1000;
         }
         
+        #settings-page:not(.hidden) {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #settings-page .app {
+            max-width: 500px;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            margin: 0 10px;
+        }
+        
 
         
         .slider {
@@ -218,6 +232,10 @@
         
         body.dark-mode .song-item:hover, 
         body.dark-mode .setlist-item:hover {
+            background-color: #2d2d2d;
+        }
+        
+        body.dark-mode .view-setlist-song-item:hover {
             background-color: #2d2d2d;
         }
         
@@ -527,25 +545,11 @@
                         </label>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Settings Page -->
-        <div id="settings-page" class="hidden">
-            <div class="page-header">
-                <button class="btn btn-secondary" id="back-to-home-from-settings"><i class="fas fa-arrow-left"></i></button>
-                <h2>Settings</h2>
-                <div></div> <!-- Spacer for flex alignment -->
-            </div>
-
-            <div class="form-group">
-                <label>Appearance</label>
-                <div class="setting-item">
-                    <span>Dark Mode</span>
-                    <label class="switch">
-                        <input type="checkbox" id="dark-mode-toggle">
-                        <span class="slider"></span>
-                    </label>
+                <div class="form-group">
+                    <label>Metronome Volume</label>
+                    <input type="range" min="0" max="100" value="50" class="volume-slider" id="metronome-volume">
+                    <div class="volume-label">Volume: <span id="metronome-volume-value">50</span>%</div>
                 </div>
             </div>
         </div>
@@ -649,6 +653,7 @@ let editingSetlistId = null;
 let cameFromViewSetlist = false;
 let transposeValue = 0;
 let metronomeBuffer = null;
+let metronomeVolume = 50; // Default volume (0-100)
  
 /* ---------- elements ---------- */
 const homeSongsPage = document.getElementById('home-songs-page');
@@ -834,6 +839,18 @@ document.getElementById('dark-mode-toggle').addEventListener('change', function(
     }
 });
 
+// Metronome volume control
+const metronomeVolumeSlider = document.getElementById('metronome-volume');
+const metronomeVolumeValue = document.getElementById('metronome-volume-value');
+if (metronomeVolumeSlider && metronomeVolumeValue) {
+    metronomeVolumeSlider.addEventListener('input', function() {
+        metronomeVolume = parseInt(this.value);
+        metronomeVolumeValue.textContent = metronomeVolume;
+        // Save preference to localStorage
+        localStorage.setItem('setlistManager_metronomeVolume', metronomeVolume);
+    });
+}
+
 /* ---------- init ---------- */
 document.addEventListener('DOMContentLoaded', function() {
     renderSongsList();
@@ -857,6 +874,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const darkModeToggle = document.getElementById('dark-mode-toggle');
         if (darkModeToggle) {
             darkModeToggle.checked = true;
+        }
+    }
+    
+    // Load metronome volume preference
+    const savedMetronomeVolume = localStorage.getItem('setlistManager_metronomeVolume');
+    if (savedMetronomeVolume !== null) {
+        metronomeVolume = parseInt(savedMetronomeVolume);
+        const metronomeVolumeSlider = document.getElementById('metronome-volume');
+        const metronomeVolumeValue = document.getElementById('metronome-volume-value');
+        if (metronomeVolumeSlider && metronomeVolumeValue) {
+            metronomeVolumeSlider.value = metronomeVolume;
+            metronomeVolumeValue.textContent = metronomeVolume;
         }
     }
     
@@ -1980,14 +2009,9 @@ function createClickSound(beatTime, beatNumber) {
     
     const gainNode = audioContext.createGain();
     
-    // Configure sound based on beat - first beat slightly louder
-    if (beatNumber === 0) {
-        // Downbeat - slightly louder
-        gainNode.gain.setValueAtTime(0.28, beatTime);
-    } else {
-        // Other beats - standard volume
-        gainNode.gain.setValueAtTime(0.20, beatTime);
-    }
+    // All beats sound the same with adjustable volume
+    const volume = metronomeVolume / 100 * 0.8; // Scale to 0-0.8 range
+    gainNode.gain.setValueAtTime(volume, beatTime);
     
     // Connect nodes: source -> gain -> destination
     source.connect(gainNode);
@@ -2002,16 +2026,10 @@ function createFallbackClick(beatTime, beatNumber) {
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     
-    // Configure sound based on beat
-    if (beatNumber === 0) {
-        // Downbeat - lower frequency, louder
-        oscillator.frequency.setValueAtTime(880, beatTime);
-        gainNode.gain.setValueAtTime(0.15, beatTime);
-    } else {
-        // Other beats - higher frequency, quieter
-        oscillator.frequency.setValueAtTime(440, beatTime);
-        gainNode.gain.setValueAtTime(0.1, beatTime);
-    }
+    // All beats sound the same with adjustable volume
+    oscillator.frequency.setValueAtTime(880, beatTime);
+    const volume = metronomeVolume / 100 * 0.5; // Scale to 0-0.5 range
+    gainNode.gain.setValueAtTime(volume, beatTime);
     
     // Quick decay
     gainNode.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.05);
