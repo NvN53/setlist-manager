@@ -599,6 +599,19 @@
                     <label>Volume</label>
                     <input type="range" min="0" max="100" value="50" class="volume-slider" id="volume-slider">
                 </div>
+                
+                <div class="form-group">
+                    <label>Pitch Detection</label>
+                    <button id="tap-to-hum" class="btn btn-secondary" style="width: 100%; padding: 12px; margin-bottom: 10px;">Tap to Hum</button>
+                    <div class="pitch-hint" style="text-align: center; font-size: 0.8em; color: #6c757d; margin-bottom: 10px;">
+                        <div>Hum a steady note (no vibrato)</div>
+                        <div>Use 'mmm' sound</div>
+                    </div>
+                    <div id="detected-pitch" class="pad-status" style="text-align: center; min-height: 24px; font-weight: bold;">
+                        <span id="detected-pitch-value">-</span>
+                    </div>
+                    <button id="use-detected-pitch" class="btn btn-outline-primary" style="width: 100%; margin-top: 10px; display: none;">Use Detected Pitch</button>
+                </div>
             </div>
         </div>
     </div>
@@ -929,6 +942,305 @@ function initAmbientPad() {
     };
 }
 
+// Pitch detection variables
+let pitchDetectionAnalyser = null;
+let pitchDetectionScriptProcessor = null;
+let pitchDetectionSource = null;
+let microphoneStream = null;
+let isDetectingPitch = false;
+
+// Variables for improved pitch detection
+let pitchEstimates = [];
+let detectionStartTime = null;
+let stablePitchDetected = false;
+const PITCH_DETECTION_WINDOW = 1000; // Collect estimates for 1 second
+const STABLE_DURATION_MS = 300; // Require stability for 300ms
+const CENT_TOLERANCE = 30; // ±30 cents tolerance
+const MIN_AMPLITUDE = 0.01; // Minimum amplitude to consider a signal
+
+// Function to start pitch detection
+async function startPitchDetection() {
+    try {
+        // Request microphone access
+        microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Create audio context if it doesn't exist
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            loadMetronomeSound();
+        }
+        
+        // Create analyser node for pitch detection
+        pitchDetectionAnalyser = audioContext.createAnalyser();
+        pitchDetectionAnalyser.fftSize = 2048;
+        
+        // Create script processor for real-time processing
+        pitchDetectionScriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+        pitchDetectionScriptProcessor.onaudioprocess = detectPitch;
+        
+        // Connect microphone -> analyser -> script processor
+        pitchDetectionSource = audioContext.createMediaStreamSource(microphoneStream);
+        pitchDetectionSource.connect(pitchDetectionAnalyser);
+        pitchDetectionAnalyser.connect(pitchDetectionScriptProcessor);
+        pitchDetectionScriptProcessor.connect(audioContext.destination); // Connect to destination to prevent audio drop
+        
+        isDetectingPitch = true;
+        stablePitchDetected = false;
+        pitchEstimates = [];
+        detectionStartTime = Date.now();
+        
+        document.getElementById('tap-to-hum').textContent = 'Listening...';
+        document.getElementById('tap-to-hum').classList.add('btn-warning');
+        document.getElementById('tap-to-hum').classList.remove('btn-secondary');
+        
+        // Clear previous detection
+        document.getElementById('detected-pitch-value').textContent = 'Listening...';
+        document.getElementById('use-detected-pitch').style.display = 'none';
+        
+    } catch (err) {
+        console.error('Error accessing microphone:', err);
+        alert('Could not access microphone. Please ensure you have granted permission and have a microphone connected.');
+        stopPitchDetection();
+    }
+}
+
+// Function to stop pitch detection
+function stopPitchDetection() {
+    if (microphoneStream) {
+        microphoneStream.getTracks().forEach(track => track.stop());
+        microphoneStream = null;
+    }
+    
+    if (pitchDetectionSource) {
+        pitchDetectionSource.disconnect();
+        pitchDetectionSource = null;
+    }
+    
+    if (pitchDetectionScriptProcessor) {
+        pitchDetectionScriptProcessor.disconnect();
+        pitchDetectionScriptProcessor.onaudioprocess = null;
+        pitchDetectionScriptProcessor = null;
+    }
+    
+    if (pitchDetectionAnalyser) {
+        pitchDetectionAnalyser.disconnect();
+        pitchDetectionAnalyser = null;
+    }
+    
+    isDetectingPitch = false;
+    stablePitchDetected = false;
+    pitchEstimates = [];
+    detectionStartTime = null;
+    
+    document.getElementById('tap-to-hum').textContent = 'Tap to Hum';
+    document.getElementById('tap-to-hum').classList.add('btn-secondary');
+    document.getElementById('tap-to-hum').classList.remove('btn-warning');
+}
+
+// Improved pitch detection algorithm collecting estimates over time
+function detectPitch(event) {
+    if (!isDetectingPitch) return;
+    
+    const inputData = event.inputBuffer.getChannelData(0);
+    const sampleRate = audioContext.sampleRate;
+    
+    // Calculate average amplitude to check for signal
+    const avgAmplitude = inputData.reduce((sum, val) => sum + Math.abs(val), 0) / inputData.length;
+    
+    // Skip if amplitude is too low
+    if (avgAmplitude < MIN_AMPLITUDE) return;
+    
+    // Method 1: Autocorrelation-based pitch detection
+    let bestPeriod = -1;
+    let bestCorrelation = -1;
+    
+    // Define reasonable range for musical pitch (40Hz to 1200Hz)
+    const minSampleIndex = Math.floor(sampleRate / 1200);
+    const maxSampleIndex = Math.floor(sampleRate / 40);
+    
+    // Find the best correlation period
+    for (let offset = minSampleIndex; offset <= maxSampleIndex; offset++) {
+        let correlation = 0;
+        let sum1 = 0;
+        let sum2 = 0;
+        let sumsq1 = 0;
+        let sumsq2 = 0;
+        let product = 0;
+        
+        // Calculate correlation for this offset using a more robust method
+        for (let i = 0; i < inputData.length - offset; i++) {
+            const val1 = inputData[i];
+            const val2 = inputData[i + offset];
+            sum1 += val1;
+            sum2 += val2;
+            sumsq1 += val1 * val1;
+            sumsq2 += val2 * val2;
+            product += val1 * val2;
+        }
+        
+        // Calculate normalized cross-correlation coefficient
+        const n = inputData.length - offset;
+        const mean1 = sum1 / n;
+        const mean2 = sum2 / n;
+        
+        // Recalculate with mean-subtracted values
+        let numerator = 0;
+        let sumsq1_centered = 0;
+        let sumsq2_centered = 0;
+        
+        for (let i = 0; i < inputData.length - offset; i++) {
+            const val1_centered = inputData[i] - mean1;
+            const val2_centered = inputData[i + offset] - mean2;
+            numerator += val1_centered * val2_centered;
+            sumsq1_centered += val1_centered * val1_centered;
+            sumsq2_centered += val2_centered * val2_centered;
+        }
+        
+        const denominator = Math.sqrt(sumsq1_centered * sumsq2_centered);
+        
+        if (denominator > 0) {
+            const corr = numerator / denominator;
+            if (corr > bestCorrelation) {
+                bestCorrelation = corr;
+                bestPeriod = offset;
+            }
+        }
+    }
+    
+    // Method 2: Zero-crossing rate as backup
+    let zeroCrossings = 0;
+    for (let i = 1; i < inputData.length; i++) {
+        if ((inputData[i-1] >= 0 && inputData[i] < 0) || (inputData[i-1] < 0 && inputData[i] >= 0)) {
+            zeroCrossings++;
+        }
+    }
+    
+    const avgZeroCrossingRate = zeroCrossings / inputData.length * sampleRate;
+    
+    // Determine the best frequency estimate
+    let frequency = null;
+    
+    // If autocorrelation gives a strong result, use it
+    if (bestCorrelation > 0.1 && bestPeriod !== -1) { // Lower threshold for better sensitivity
+        frequency = sampleRate / bestPeriod;
+    } else if (avgZeroCrossingRate > 0) {
+        // For sine waves, zero-crossing rate equals twice the frequency
+        // So divide by 2 to get the actual frequency
+        frequency = avgZeroCrossingRate / 2;
+    }
+    
+    // Validate frequency is in reasonable range
+    if (frequency && frequency >= 40 && frequency <= 1200) {
+        // Add the frequency estimate to our collection
+        pitchEstimates.push({
+            frequency: frequency,
+            timestamp: Date.now()
+        });
+        
+        // Filter out estimates older than 1 second
+        const now = Date.now();
+        pitchEstimates = pitchEstimates.filter(estimate => now - estimate.timestamp <= PITCH_DETECTION_WINDOW);
+        
+        // If we have enough estimates, process them
+        if (pitchEstimates.length > 5) { // Need at least 5 estimates to process
+            // Sort by frequency to calculate median
+            const sortedEstimates = [...pitchEstimates].sort((a, b) => a.frequency - b.frequency);
+            
+            // Calculate median frequency
+            const medianIndex = Math.floor(sortedEstimates.length / 2);
+            const medianFrequency = sortedEstimates[medianIndex].frequency;
+            
+            // Count occurrences of each note to find most frequent
+            const noteCounts = {};
+            pitchEstimates.forEach(estimate => {
+                const note = frequencyToNote(estimate.frequency).pitch;
+                noteCounts[note] = (noteCounts[note] || 0) + 1;
+            });
+            
+            // Find the most frequent note
+            let mostFrequentNote = null;
+            let maxCount = 0;
+            for (const [note, count] of Object.entries(noteCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostFrequentNote = note;
+                }
+            }
+            
+            // Check for stability: pitch should stay within ±30 cents for 300ms
+            if (mostFrequentNote) {
+                // Get all estimates that correspond to the most frequent note
+                const relevantEstimates = pitchEstimates.filter(est => {
+                    const estNote = frequencyToNote(est.frequency).pitch;
+                    return estNote === mostFrequentNote;
+                });
+                
+                if (relevantEstimates.length > 0) {
+                    // Check if the most recent estimates are stable
+                    const recentTimeThreshold = now - STABLE_DURATION_MS;
+                    const recentStableEstimates = relevantEstimates.filter(est => est.timestamp >= recentTimeThreshold);
+                    
+                    if (recentStableEstimates.length > 0) {
+                        // Calculate the range of recent stable estimates
+                        const recentFrequencies = recentStableEstimates.map(est => est.frequency);
+                        const minFreq = Math.min(...recentFrequencies);
+                        const maxFreq = Math.max(...recentFrequencies);
+                        
+                        // Convert to cents difference
+                        const maxCentsDiff = 1200 * Math.log2(maxFreq / minFreq);
+                        
+                        if (Math.abs(maxCentsDiff) <= CENT_TOLERANCE && !stablePitchDetected) {
+                            // We have a stable pitch!
+                            stablePitchDetected = true;
+                            
+                            // Calculate final frequency as median of stable estimates
+                            const stableMedianIndex = Math.floor(recentStableEstimates.length / 2);
+                            const stableSorted = recentStableEstimates.sort((a, b) => a.frequency - b.frequency);
+                            const finalFrequency = stableSorted[stableMedianIndex].frequency;
+                            const finalNote = frequencyToNote(finalFrequency);
+                            
+                            // Update UI with detected pitch
+                            document.getElementById('detected-pitch-value').textContent = `${finalNote.note} (${Math.round(finalFrequency)} Hz)`;
+                            
+                            // Store the detected pitch for later use
+                            window.detectedPitch = finalNote.pitch;
+                            
+                            // Show the button to use the detected pitch
+                            document.getElementById('use-detected-pitch').style.display = 'block';
+                            
+                            // Stop detection after a good reading
+                            setTimeout(() => {
+                                if (isDetectingPitch) {
+                                    stopPitchDetection();
+                                }
+                            }, 2000); // Stop after 2 seconds to allow for longer listening
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Convert frequency to closest musical note
+function frequencyToNote(frequency) {
+    const A4 = 440;
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    
+    // Calculate the number of half steps from A4
+    const halfSteps = 12 * Math.log2(frequency / A4);
+    const noteIndex = Math.round(halfSteps) % 12;
+    const octave = Math.floor(Math.round(halfSteps) / 12) + 4;
+    
+    // Adjust negative modulo
+    const adjustedNoteIndex = ((noteIndex % 12) + 12) % 12;
+    
+    return {
+        note: notes[adjustedNoteIndex],
+        pitch: notes[adjustedNoteIndex]
+    };
+}
+
 // Helper function to get frequency for a note
 function getFrequencyForNote(note) {
     // A4 = 440Hz
@@ -1197,6 +1509,83 @@ document.getElementById('delete-setlist-btn').addEventListener('click', deleteSe
         showAmbientPad();
     });
 document.getElementById('close-ambient-modal').addEventListener('click', hideAmbientPad);
+
+// Tap to hum functionality
+document.getElementById('tap-to-hum').addEventListener('click', function() {
+    if (isDetectingPitch) {
+        // If already detecting, stop it
+        stopPitchDetection();
+    } else {
+        // Turn off the ambient pad if it's currently playing
+        if (ambientPad && ambientPad.playing) {
+            ambientPad.stop();
+            ambientPad = null;
+            currentPadPitch = null;
+            
+            // Update UI to reflect that pad is off
+            document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            updatePadStatus('Inactive');
+            
+            // Update the ambient toggle button appearance
+            updateAmbientToggleState();
+        }
+        
+        // Start pitch detection
+        startPitchDetection();
+    }
+});
+
+// Use detected pitch functionality
+document.getElementById('use-detected-pitch').addEventListener('click', function() {
+    if (window.detectedPitch) {
+        // Set the current pad pitch to the detected pitch
+        currentPadPitch = window.detectedPitch;
+        
+        // If ambient pad is currently playing, restart it with the new pitch
+        if (ambientPad && ambientPad.playing) {
+            ambientPad.stop();
+            ambientPad = initAmbientPad();
+            if (ambientPad) {
+                ambientPad.createPad(currentPadPitch, currentPadMode);
+                
+                // Update the ambient toggle button appearance
+                updateAmbientToggleState();
+            }
+        } else {
+            // If ambient pad is not currently playing, start it with the detected pitch
+            ambientPad = initAmbientPad();
+            if (ambientPad) {
+                ambientPad.createPad(currentPadPitch, currentPadMode);
+                
+                // Update the ambient toggle button appearance
+                updateAmbientToggleState();
+            }
+        }
+        
+        // Highlight the detected pitch button in the modal
+        document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const detectedPitchBtn = document.querySelector(`#pitch-buttons .pitch-btn[data-pitch="${window.detectedPitch}"]`);
+        if (detectedPitchBtn) {
+            detectedPitchBtn.classList.add('active');
+        }
+        
+        // Update the pad status
+        updatePadStatus(`Active: ${window.detectedPitch} ${currentPadMode}`);
+        
+        // Show confirmation
+        document.getElementById('detected-pitch-value').textContent = `Using ${window.detectedPitch}`;
+        
+        // Hide the button after use
+        setTimeout(() => {
+            document.getElementById('use-detected-pitch').style.display = 'none';
+        }, 2000);
+    }
+});
 
 
 document.getElementById('song-search').addEventListener('input', filterSongs);
