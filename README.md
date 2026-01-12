@@ -1,4 +1,4 @@
-# Setlist Manager for Pianists
+# Setlist Manager for Pianists v1.1
 
 A simple, standalone web application for musicians to manage their setlists, songs, and practice sessions.
 
@@ -20,9 +20,17 @@ A simple, standalone web application for musicians to manage their setlists, son
    - Ambient pad for pitch reference
 
 4. **Practice Tools**
-   - Ambient pad with pitch detection
+   - Ambient pad with advanced pitch detection
+   - "Tap to Hum" feature with improved accuracy
    - Major/minor mode selection
    - Volume control
+
+5. **Enhanced Ambient Pad**
+   - Dual-section button: "Ambient" toggle and dropdown arrow
+   - Stable pitch detection algorithm
+   - Real-time pitch feedback
+   - Easy pitch detection with microphone
+   - Humming guidance (steady note, use 'mmm' sound)
 
 ## How to Use
 
