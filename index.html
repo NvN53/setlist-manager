@@ -87,6 +87,7 @@
         .modal-content { background:white; padding:20px; border-radius:8px; max-width:90%; max-height:90%; overflow-y:auto; width:400px; }
         .pitch-btn { padding:8px 12px; margin:4px; border:1px solid #ddd; background:white; border-radius:4px; cursor:pointer; }
         .pitch-btn.active { background-color:#007bff; color:white; }
+            .ambient-btn-container { display: flex; }
         
         /* Ambient pad modal styles */
         #tap-to-hum { width: 100%; padding: 12px; margin-bottom: 15px; }
@@ -503,7 +504,14 @@
 
                 <div class="controls">
                     <div class="main-controls" style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-                        <button class="btn btn-secondary" id="ambient-btn" style="font-size: 0.8rem; padding: 5px 10px;">Ambient</button>
+                        <div class="ambient-btn-container">
+                                                <button class="btn btn-secondary ambient-toggle" id="ambient-toggle" style="font-size: 0.8rem; padding: 5px 10px; border-radius: 4px 0 0 4px; border-right: none;">
+                                                    Ambient
+                                                </button>
+                                                <button class="btn btn-secondary ambient-dropdown" id="ambient-dropdown" style="font-size: 0.8rem; padding: 5px 5px; border-radius: 0 4px 4px 0; margin-left: -1px;">
+                                                    <i class="fas fa-chevron-down"></i>
+                                                </button>
+                                            </div>
                         <button id="metronome-toggle" class="btn btn-secondary" style="font-size: 0.8rem; padding: 5px 10px; display: flex; align-items: center; justify-content: center;">Metronome</button>
                         <div style="display: flex; align-items: center; gap: 5px;">
                             <label style="font-size: 0.8rem; margin: 0;">Autoscroll:</label>
@@ -769,7 +777,7 @@ function initAmbientPad() {
             if (!this.gainNode) return;
             
             const now = audioContext.currentTime;
-            const fadeInTime = 3; // 3 seconds fade in
+            const fadeInTime = 0.5; // 0.5 seconds fade in for quicker response
             
             // Exponential fade in for smoothness
             this.gainNode.gain.cancelScheduledValues(now);
@@ -971,6 +979,32 @@ function updatePadStatus(status) {
     if (statusElement) {
         statusElement.textContent = status;
     }
+    
+    // Update ambient toggle button appearance
+    const ambientToggle = document.getElementById('ambient-toggle');
+    if (ambientToggle) {
+        if (status === 'Inactive') {
+            ambientToggle.classList.remove('btn-primary');
+            ambientToggle.classList.add('btn-secondary');
+        } else {
+            ambientToggle.classList.remove('btn-secondary');
+            ambientToggle.classList.add('btn-primary');
+        }
+    }
+}
+
+// Function to initialize the ambient toggle button state
+function updateAmbientToggleState() {
+    const ambientToggle = document.getElementById('ambient-toggle');
+    if (ambientToggle) {
+        if (ambientPad && ambientPad.playing) {
+            ambientToggle.classList.remove('btn-secondary');
+            ambientToggle.classList.add('btn-primary');
+        } else {
+            ambientToggle.classList.remove('btn-primary');
+            ambientToggle.classList.add('btn-secondary');
+        }
+    }
 }
 
 /* ---------- elements ---------- */
@@ -996,6 +1030,16 @@ document.getElementById('back-to-songs-from-lyrics').addEventListener('click', f
         console.log('Metronome OFF');
     }
     
+    // Turn off ambient pad when exiting lyrics page
+    if (ambientPad) {
+        ambientPad.stop();
+        ambientPad = null;
+    }
+    currentPadPitch = null;
+    
+    // Update ambient toggle button appearance
+    updateAmbientToggleState();
+    
     if (currentSetlist && window.currentSetlistContext) {
         showViewSetlistPage(currentSetlist);
     } else {
@@ -1009,6 +1053,17 @@ document.getElementById('back-to-setlists-from-view').addEventListener('click', 
         metronomeBtn.classList.remove('active');
         console.log('Metronome OFF');
     }
+    
+    // Turn off ambient pad when exiting lyrics page
+    if (ambientPad) {
+        ambientPad.stop();
+        ambientPad = null;
+    }
+    currentPadPitch = null;
+    
+    // Update ambient toggle button appearance
+    updateAmbientToggleState();
+    
     showSetlistsPage();
 });
 document.getElementById('back-to-home-from-settings').addEventListener('click', showSongsPage);
@@ -1100,7 +1155,47 @@ document.getElementById('cancel-edit-setlist-btn').addEventListener('click', fun
 document.getElementById('save-setlist-btn').addEventListener('click', saveSetlist);
 document.getElementById('delete-setlist-btn').addEventListener('click', deleteSetlist);
 
-document.getElementById('ambient-btn').addEventListener('click', showAmbientPad);
+// Ambient pad toggle and dropdown functionality
+    document.getElementById('ambient-toggle').addEventListener('click', function() {
+        // Toggle the ambient pad on/off with last selected pitch
+        if (ambientPad && ambientPad.playing) {
+            // If pad is currently playing, stop it
+            ambientPad.stop();
+            ambientPad = null;
+            currentPadPitch = null;
+            
+            // Update UI
+            document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            updatePadStatus('Inactive');
+            
+            // Update button appearance
+            this.classList.remove('btn-primary');
+            this.classList.add('btn-secondary');
+        } else {
+            // If no pad is currently playing, start with last selected pitch or default
+            if (!currentPadPitch) {
+                // Default to C major if no pitch has been selected yet
+                currentPadPitch = 'C';
+                currentPadMode = 'major';
+            }
+            
+            ambientPad = initAmbientPad();
+            if (ambientPad) {
+                ambientPad.createPad(currentPadPitch, currentPadMode);
+                
+                // Update button appearance
+                this.classList.remove('btn-secondary');
+                this.classList.add('btn-primary');
+            }
+        }
+    });
+    
+    document.getElementById('ambient-dropdown').addEventListener('click', function() {
+        // Show the ambient pad window
+        showAmbientPad();
+    });
 document.getElementById('close-ambient-modal').addEventListener('click', hideAmbientPad);
 
 
@@ -1227,15 +1322,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Close ambient pad functionality
-    document.getElementById('close-ambient-modal').addEventListener('click', function() {
-        if (ambientPad) {
-            ambientPad.stop();
-            ambientPad = null;
-        }
-        currentPadPitch = null;
-        updatePadStatus('Inactive');
-    });
+
     
     // Autoscroll functionality
     const autoscrollToggle = document.getElementById('autoscroll-toggle');
@@ -1467,21 +1554,37 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
     // Store current setlist context for navigation
     window.currentSetlistContext = { songIds, currentIndex };
 }
-function showAmbientPad(){ ambientModal.classList.remove('hidden'); }
-function hideAmbientPad(){ 
-    // Stop the ambient pad if it's playing
-    if (ambientPad) {
-        ambientPad.stop();
-        ambientPad = null;
+function showAmbientPad(){ 
+    // Show the ambient pad modal
+    ambientModal.classList.remove('hidden'); 
+    
+    // Highlight the currently active pitch if the ambient pad is playing
+    if (currentPadPitch && ambientPad && ambientPad.playing) {
+        // Remove active class from all pitch buttons
+        document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Add active class to the current pitch button
+        const currentPitchBtn = document.querySelector(`#pitch-buttons .pitch-btn[data-pitch="${currentPadPitch}"]`);
+        if (currentPitchBtn) {
+            currentPitchBtn.classList.add('active');
+        }
+        
+        // Update the mode buttons to reflect the current mode
+        document.querySelectorAll('[data-mode]').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const currentModeBtn = document.querySelector(`[data-mode="${currentPadMode}"]`);
+        if (currentModeBtn) {
+            currentModeBtn.classList.add('active');
+        }
     }
-    currentPadPitch = null;
-    
-    // Remove active class from all pitch buttons
-    document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    updatePadStatus('Inactive');
+}
+function hideAmbientPad(){ 
+    // Don't stop the ambient pad when modal is closed
+    // Only hide the modal
     ambientModal.classList.add('hidden'); 
 }
 
