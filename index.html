@@ -502,8 +502,8 @@
                 <div class="song-details" id="lyrics-details" style="margin: 5px 0;">Key • BPM bpm</div>
 
                 <div class="controls">
-                    <button class="btn btn-secondary" id="ambient-btn" style="font-size: 0.8rem; padding: 5px 10px;">Ambient</button>
-                    <div class="metronome-controls" style="display: flex; align-items: center; gap: 8px;">
+                    <div class="main-controls" style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                        <button class="btn btn-secondary" id="ambient-btn" style="font-size: 0.8rem; padding: 5px 10px;">Ambient</button>
                         <button id="metronome-toggle" class="btn btn-secondary" style="font-size: 0.8rem; padding: 5px 10px; display: flex; align-items: center; justify-content: center;">Metronome</button>
                         <div style="display: flex; align-items: center; gap: 5px;">
                             <label style="font-size: 0.8rem; margin: 0;">Autoscroll:</label>
@@ -516,10 +516,10 @@
                             </select>
                         </div>
                     </div>
-                    <div class="transpose-controls">
-                        <button class="transpose-btn" id="transpose-down-lyrics" style="width: 30px; height: 30px; font-size: 0.8rem;">-</button>
+                    <div class="transpose-controls" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 5px;">
+                        <button class="btn btn-secondary" id="transpose-down-lyrics" style="width: 30px; height: 30px; font-size: 0.8rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0;">-</button>
                         <span class="transpose-value" id="transpose-value">0</span>
-                        <button class="transpose-btn" id="transpose-up-lyrics" style="width: 30px; height: 30px; font-size: 0.8rem;">+</button>
+                        <button class="btn btn-secondary" id="transpose-up-lyrics" style="width: 30px; height: 30px; font-size: 0.8rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0;">+</button>
                     </div>
                 </div>
             </div>
@@ -566,9 +566,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Pitch Finder</label>
-                    <button class="btn btn-secondary" id="tap-to-hum"><i class="fas fa-microphone"></i> Tap to hum</button>
-                    <div>Detected pitch: <span id="detected-pitch">G#</span></div>
+                    <label>Ambient Pad</label>
+                    <div class="pad-status" id="pad-status">Inactive</div>
                 </div>
 
                 <div class="form-group">
@@ -649,6 +648,308 @@ document.body.addEventListener('click', function initAudio() {
     }
 }, { once: true });
 
+// Initialize ambient pad when audio context is available
+function initAmbientPad() {
+    if (!audioContext) {
+        console.warn('Audio context not available yet');
+        return null;
+    }
+    
+    return {
+        oscillators: [],
+        gainNode: null,
+        filter: null,
+        lfo: null,
+        lfoGain: null,
+        playing: false,
+        
+        // Create the ambient pad sound
+        createPad: function(pitch, mode) {
+            // Create nodes
+            this.gainNode = audioContext.createGain();
+            this.filter = audioContext.createBiquadFilter();
+            this.lfo = audioContext.createOscillator();
+            this.lfoGain = audioContext.createGain();
+            
+            // Configure filter (low-pass for dark, warm sound)
+            this.filter.type = 'lowpass';
+            
+            // Adjust filter frequency based on pitch to add more bass for higher notes
+            const noteIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(pitch);
+            if (noteIndex >= 5) { // For F and above
+                this.filter.frequency.value = 500; // Higher for more bass in higher notes
+            } else { // For C, C#, D, D#, E
+                this.filter.frequency.value = 400; // Lower for darker, more rounded tone
+            }
+            
+            this.filter.Q.value = 0.3; // Very soft resonance for vocal-like quality
+            
+            // Configure LFO for subtle movement
+            this.lfo.type = 'sine';
+            this.lfo.frequency.value = 0.005; // Very slow movement for gentle breath-like effect
+            this.lfoGain.gain.value = 15; // Minimal modulation for smoother sound
+            
+            // Connect LFO -> filter frequency
+            this.lfo.connect(this.lfoGain);
+            this.lfoGain.connect(this.filter.frequency);
+            
+            // Calculate frequencies based on pitch and mode
+            const rootFreq = getFrequencyForNote(pitch);
+            let frequencies = [];
+            
+            if (mode === 'major') {
+                // Major: root + perfect fifth
+                frequencies = [rootFreq, rootFreq * Math.pow(2, 7/12)]; // Perfect fifth
+            } else {
+                // Minor: root + just minor third (more pleasant than equal temperament)
+                frequencies = [rootFreq, rootFreq * (6/5)]; // Just intonation minor third
+            }
+            
+            // Create oscillators for each pitch
+            this.oscillators = [];
+            
+            frequencies.forEach((freq, index) => {
+                // Create multiple oscillators for breathy, vocal-like sound
+                // Two sine oscillators slightly detuned for soft, warm sound
+                const sine1 = audioContext.createOscillator();
+                sine1.type = 'sine';
+                sine1.frequency.value = freq;
+                
+                const sine2 = audioContext.createOscillator();
+                sine2.type = 'sine';
+                // Slightly detune (5 cents for breathy effect)
+                sine2.frequency.value = freq * Math.pow(2, 5/1200); 
+                
+                // One very soft sub oscillator for foundation
+                const sub = audioContext.createOscillator();
+                sub.type = 'sine';
+                sub.frequency.value = freq * 0.5;
+                // Reduce volume of sub oscillator to make it very subtle
+                const subGain = audioContext.createGain();
+                subGain.gain.value = 0.3; // Make sub oscillator much quieter
+                sub.connect(subGain);
+                
+                // Connect all to filter
+                sine1.connect(this.filter);
+                sine2.connect(this.filter);
+                subGain.connect(this.filter);
+                
+                // Store oscillators and gains
+                this.oscillators.push({sine1, sine2, sub: {osc: sub, gain: subGain}});
+            });
+            
+            // Connect filter -> gain -> destination
+            this.filter.connect(this.gainNode);
+            this.gainNode.connect(audioContext.destination);
+            
+            // Set initial volume
+            this.gainNode.gain.value = 0; // Start silent for smooth fade-in
+            
+            // Start all oscillators
+            this.oscillators.forEach(oscSet => {
+                oscSet.sine1.start();
+                oscSet.sine2.start();
+                oscSet.sub.osc.start();
+            });
+            
+            this.lfo.start();
+            
+            // Set initial volume based on padVolume
+            this.gainNode.gain.value = 0; // Start silent for smooth fade-in
+            
+            // Start playing
+            this.playing = true;
+            
+            // Fade in
+            this.fadeIn();
+        },
+        
+        // Fade in the pad
+        fadeIn: function() {
+            if (!this.gainNode) return;
+            
+            const now = audioContext.currentTime;
+            const fadeInTime = 3; // 3 seconds fade in
+            
+            // Exponential fade in for smoothness
+            this.gainNode.gain.cancelScheduledValues(now);
+            this.gainNode.gain.setValueAtTime(0, now);
+            // Apply volume limit (below harsh threshold) during fade in
+            const limitedVolume = Math.min(padVolume, 0.4); // Ensure volume stays below harsh threshold
+            this.gainNode.gain.exponentialRampToValueAtTime(limitedVolume, now + fadeInTime);
+        },
+        
+        // Fade out the pad
+        fadeOut: function() {
+            if (!this.gainNode) return;
+            
+            const now = audioContext.currentTime;
+            const fadeOutTime = 0.5; // 0.5 seconds fade out (faster to prevent residue)
+            
+            // Exponential fade out for smoothness
+            this.gainNode.gain.cancelScheduledValues(now);
+            this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, now);
+            this.gainNode.gain.exponentialRampToValueAtTime(0.001, now + fadeOutTime);
+            
+            // Schedule cleanup after fade out completes
+            setTimeout(() => {
+                if (this.playing) { // Only cleanup if still playing
+                    this.cleanup();
+                }
+            }, fadeOutTime * 1000);
+        },
+        
+        // Switch to new pitch (immediate stop and start)
+        switchToPitch: function(newPitch, newMode) {
+            // Stop the current pad immediately
+            this.stop();
+            
+            // Create new pad immediately
+            this.createPad(newPitch, newMode);
+        },
+        
+        // Change mode without changing pitch
+        changeMode: function(newMode) {
+            if (!this.playing) return;
+            
+            // Get the current pitch from the pad's internal state
+            // Since we don't have a direct way to get it, we'll need to track it differently
+            // For now, we'll use the global variable since that's what's available
+            if (!currentPadPitch) return;
+            
+            // Stop the current pad immediately
+            this.stop();
+            
+            // Create new pad with same pitch but new mode
+            this.createPad(currentPadPitch, newMode);
+        },
+        
+        // Update volume
+        setVolume: function(volume) {
+            padVolume = volume;
+            if (this.gainNode && this.playing) {
+                this.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+                this.gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            }
+        },
+        
+        // Stop the pad
+        stop: function() {
+            if (!this.playing) return;
+            
+            // Immediate stop without fade out
+            try {
+                // Stop all oscillators immediately
+                this.oscillators.forEach(oscSet => {
+                    if (oscSet.sine1) {
+                        try { oscSet.sine1.stop(); } catch(e) {}
+                    }
+                    if (oscSet.sine2) {
+                        try { oscSet.sine2.stop(); } catch(e) {}
+                    }
+                    if (oscSet.sub && oscSet.sub.osc) {
+                        try { oscSet.sub.osc.stop(); } catch(e) {}
+                    }
+                });
+                
+                // Also stop the LFO
+                if (this.lfo) {
+                    try { this.lfo.stop(); } catch(e) {}
+                }
+            } catch (e) {
+                console.warn('Error stopping oscillators:', e);
+            }
+            
+            // Then cleanup
+            this.cleanup();
+            
+            // Update status
+            updatePadStatus('Inactive');
+        },
+        
+        // Clean up all nodes
+        cleanup: function() {
+            try {
+                if (this.lfo) {
+                    try { this.lfo.stop(); } catch(e) {}
+                    try { this.lfo.disconnect(); } catch(e) {}
+                }
+                
+                this.oscillators.forEach(oscSet => {
+                    if (oscSet.sine1) {
+                        try { oscSet.sine1.stop(); } catch(e) {}
+                        try { oscSet.sine1.disconnect(); } catch(e) {}
+                    }
+                    if (oscSet.sine2) {
+                        try { oscSet.sine2.stop(); } catch(e) {}
+                        try { oscSet.sine2.disconnect(); } catch(e) {}
+                    }
+                    if (oscSet.sub && oscSet.sub.osc) {
+                        try { oscSet.sub.osc.stop(); } catch(e) {}
+                        try { oscSet.sub.osc.disconnect(); } catch(e) {}
+                        // Also disconnect the sub gain node
+                        if (oscSet.sub.gain) {
+                            try { oscSet.sub.gain.disconnect(); } catch(e) {}
+                        }
+                    }
+                });
+                
+                if (this.filter) {
+                    try { this.filter.disconnect(); } catch(e) {}
+                }
+                
+                if (this.gainNode) {
+                    try { this.gainNode.disconnect(); } catch(e) {}
+                }
+                
+                if (this.lfoGain) {
+                    try { this.lfoGain.disconnect(); } catch(e) {}
+                }
+            } catch (e) {
+                console.warn('Error during cleanup:', e);
+            }
+            
+            this.playing = false;
+            this.oscillators = [];
+            
+            // Clear references
+            this.lfo = null;
+            this.filter = null;
+            this.gainNode = null;
+            this.lfoGain = null;
+        }
+    };
+}
+
+// Helper function to get frequency for a note
+function getFrequencyForNote(note) {
+    // A4 = 440Hz
+    const A4 = 440;
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    
+    // Extract note and octave
+    let noteName = note;
+    let octave = 4; // Default octave
+    
+    // Check if the last character is a number (octave indicator)
+    const lastChar = note.charAt(note.length - 1);
+    if (!isNaN(lastChar) && lastChar !== ' ' && note.length > 1) {
+        // If the note has an octave number
+        noteName = note.substring(0, note.length - 1);
+        octave = parseInt(lastChar);
+    }
+    
+    const noteIndex = notes.indexOf(noteName);
+    if (noteIndex === -1) return A4; // Default to A4 if not found
+    
+    // Calculate semitones from A4
+    const semitonesFromA = noteIndex - 9; // A is at index 9
+    const semitonesFromA4 = semitonesFromA + (octave - 4) * 12;
+    
+    // Calculate frequency
+    return A4 * Math.pow(2, semitonesFromA4 / 12);
+}
+
 let currentSong = null;
 let currentSetlist = null;
 let editingSongId = null;
@@ -657,7 +958,21 @@ let cameFromViewSetlist = false;
 let transposeValue = 0;
 let metronomeBuffer = null;
 let metronomeVolume = 50; // Default volume (0-100)
- 
+
+// Ambient Pad variables
+let ambientPad = null;
+let currentPadPitch = null;
+let currentPadMode = 'major'; // Default to major
+let padVolume = 0.25; // Default volume (0-0.4, which is below harsh threshold)
+
+// Update pad status function
+function updatePadStatus(status) {
+    const statusElement = document.getElementById('pad-status');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+}
+
 /* ---------- elements ---------- */
 const homeSongsPage = document.getElementById('home-songs-page');
 const homeSetlistsPage = document.getElementById('home-setlists-page');
@@ -788,26 +1103,7 @@ document.getElementById('delete-setlist-btn').addEventListener('click', deleteSe
 document.getElementById('ambient-btn').addEventListener('click', showAmbientPad);
 document.getElementById('close-ambient-modal').addEventListener('click', hideAmbientPad);
 
-document.getElementById('tap-to-hum').addEventListener('click', function() {
-    // Simulate pitch detection
-    const pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const randomPitch = pitches[Math.floor(Math.random() * pitches.length)];
-    document.getElementById('detected-pitch').textContent = randomPitch;
-});
 
-// Mode selection buttons
-const modeButtons = document.querySelectorAll('[data-mode]');
-modeButtons.forEach(button => {
-    button.addEventListener('click', function() {
-        // Remove active class from all buttons
-        modeButtons.forEach(btn => btn.classList.remove('active'));
-        // Add active class to clicked button
-        this.classList.add('active');
-        // Store selected mode
-        const selectedMode = this.getAttribute('data-mode');
-        console.log('Selected mode:', selectedMode);
-    });
-});
 document.getElementById('song-search').addEventListener('input', filterSongs);
 document.getElementById('setlist-search').addEventListener('input', filterSetlists);
 document.getElementById('add-song-search').addEventListener('input', filterAvailableSongs);
@@ -897,6 +1193,49 @@ document.addEventListener('DOMContentLoaded', function() {
     if (majorButton) {
         majorButton.classList.add('active');
     }
+    
+    // Ambient pad event listeners
+    const volumeSlider = document.getElementById('volume-slider');
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', function() {
+            // Convert 0-100 to 0-0.4 (below harsh threshold) linearly
+            const volume = (this.value / 100) * 0.4;
+            if (ambientPad) {
+                ambientPad.setVolume(volume);
+            }
+        });
+    }
+    
+
+    
+    // Add event listeners to mode buttons
+    document.querySelectorAll('[data-mode]').forEach(button => {
+        button.addEventListener('click', function() {
+            const mode = this.getAttribute('data-mode');
+            currentPadMode = mode;
+            
+            // Update UI
+            document.querySelectorAll('[data-mode]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // If pad is playing, change mode while keeping same pitch
+            if (ambientPad && currentPadPitch) {
+                ambientPad.changeMode(mode);
+            }
+        });
+    });
+    
+    // Close ambient pad functionality
+    document.getElementById('close-ambient-modal').addEventListener('click', function() {
+        if (ambientPad) {
+            ambientPad.stop();
+            ambientPad = null;
+        }
+        currentPadPitch = null;
+        updatePadStatus('Inactive');
+    });
     
     // Autoscroll functionality
     const autoscrollToggle = document.getElementById('autoscroll-toggle');
@@ -1129,7 +1468,22 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
     window.currentSetlistContext = { songIds, currentIndex };
 }
 function showAmbientPad(){ ambientModal.classList.remove('hidden'); }
-function hideAmbientPad(){ ambientModal.classList.add('hidden'); }
+function hideAmbientPad(){ 
+    // Stop the ambient pad if it's playing
+    if (ambientPad) {
+        ambientPad.stop();
+        ambientPad = null;
+    }
+    currentPadPitch = null;
+    
+    // Remove active class from all pitch buttons
+    document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    updatePadStatus('Inactive');
+    ambientModal.classList.add('hidden'); 
+}
 
 function showSettingsPage() {
     // Turn off metronome when exiting lyrics page
@@ -1244,12 +1598,49 @@ function renderSetlistsList(filteredSetlists = null) {
 function renderPitchButtons() {
     const pitches = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const container = document.getElementById('pitch-buttons');
-    container.innerHTML = pitches.map(p => `<button class="pitch-btn ${p==='G#'?'active':''}" data-pitch="${p}">${p}</button>`).join('');
-    document.querySelectorAll('.pitch-btn').forEach(b => {
-        b.addEventListener('click', () => {
-            document.querySelectorAll('.pitch-btn').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            document.getElementById('detected-pitch').textContent = b.getAttribute('data-pitch');
+    container.innerHTML = pitches.map(p => `<button class="pitch-btn" data-pitch="${p}">${p}</button>`).join('');
+    
+    // Add event listeners to the pitch buttons
+    document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const pitch = this.getAttribute('data-pitch');
+            
+            if (ambientPad) {
+                // If clicking the same pitch, toggle off
+                if (currentPadPitch === pitch) {
+                    ambientPad.stop();
+                    ambientPad = null;
+                    currentPadPitch = null;
+                    
+                    // Update UI
+                    document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    updatePadStatus('Inactive');
+                    return;
+                } else {
+                    // Different pitch - switch immediately
+                    ambientPad.switchToPitch(pitch, currentPadMode);
+                }
+            } else {
+                // No pad currently playing - create new one
+                ambientPad = initAmbientPad();
+                if (ambientPad) {
+                    ambientPad.createPad(pitch, currentPadMode);
+                }
+            }
+            
+            // Update the current pitch after creating the pad
+            currentPadPitch = pitch;
+            
+            // Update UI
+            document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            updatePadStatus('Active: ' + pitch + ' ' + currentPadMode);
         });
     });
 }
