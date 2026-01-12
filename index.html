@@ -1037,189 +1037,194 @@ function stopPitchDetection() {
     document.getElementById('tap-to-hum').classList.remove('btn-warning');
 }
 
-// Improved pitch detection algorithm collecting estimates over time
+// YIN-based pitch detection algorithm with audio preprocessing
 function detectPitch(event) {
     if (!isDetectingPitch) return;
     
     const inputData = event.inputBuffer.getChannelData(0);
     const sampleRate = audioContext.sampleRate;
     
-    // Calculate average amplitude to check for signal
-    const avgAmplitude = inputData.reduce((sum, val) => sum + Math.abs(val), 0) / inputData.length;
+    // Audio preprocessing: band-pass filter (80 Hz to 1200 Hz)
+    const filteredData = applyBandPassFilter(inputData, sampleRate, 80, 1200);
     
-    // Skip if amplitude is too low
-    if (avgAmplitude < MIN_AMPLITUDE) return;
+    // Calculate RMS amplitude to check for signal
+    const rms = Math.sqrt(filteredData.reduce((sum, val) => sum + val * val, 0) / filteredData.length);
     
-    // Method 1: Autocorrelation-based pitch detection
-    let bestPeriod = -1;
-    let bestCorrelation = -1;
+    // Skip if RMS is below threshold
+    const rmsThreshold = 0.01; // Adjust as needed
+    if (rms < rmsThreshold) return;
     
-    // Define reasonable range for musical pitch (40Hz to 1200Hz)
-    const minSampleIndex = Math.floor(sampleRate / 1200);
-    const maxSampleIndex = Math.floor(sampleRate / 40);
+    // YIN algorithm implementation
+    const probabilityThreshold = 0.1;
+    const tauEstimate = computeYin(filteredData, sampleRate, 80, 1200, probabilityThreshold);
     
-    // Find the best correlation period
-    for (let offset = minSampleIndex; offset <= maxSampleIndex; offset++) {
-        let correlation = 0;
-        let sum1 = 0;
-        let sum2 = 0;
-        let sumsq1 = 0;
-        let sumsq2 = 0;
-        let product = 0;
+    if (tauEstimate !== null) {
+        const frequency = sampleRate / tauEstimate;
         
-        // Calculate correlation for this offset using a more robust method
-        for (let i = 0; i < inputData.length - offset; i++) {
-            const val1 = inputData[i];
-            const val2 = inputData[i + offset];
-            sum1 += val1;
-            sum2 += val2;
-            sumsq1 += val1 * val1;
-            sumsq2 += val2 * val2;
-            product += val1 * val2;
-        }
-        
-        // Calculate normalized cross-correlation coefficient
-        const n = inputData.length - offset;
-        const mean1 = sum1 / n;
-        const mean2 = sum2 / n;
-        
-        // Recalculate with mean-subtracted values
-        let numerator = 0;
-        let sumsq1_centered = 0;
-        let sumsq2_centered = 0;
-        
-        for (let i = 0; i < inputData.length - offset; i++) {
-            const val1_centered = inputData[i] - mean1;
-            const val2_centered = inputData[i + offset] - mean2;
-            numerator += val1_centered * val2_centered;
-            sumsq1_centered += val1_centered * val1_centered;
-            sumsq2_centered += val2_centered * val2_centered;
-        }
-        
-        const denominator = Math.sqrt(sumsq1_centered * sumsq2_centered);
-        
-        if (denominator > 0) {
-            const corr = numerator / denominator;
-            if (corr > bestCorrelation) {
-                bestCorrelation = corr;
-                bestPeriod = offset;
-            }
-        }
-    }
-    
-    // Method 2: Zero-crossing rate as backup
-    let zeroCrossings = 0;
-    for (let i = 1; i < inputData.length; i++) {
-        if ((inputData[i-1] >= 0 && inputData[i] < 0) || (inputData[i-1] < 0 && inputData[i] >= 0)) {
-            zeroCrossings++;
-        }
-    }
-    
-    const avgZeroCrossingRate = zeroCrossings / inputData.length * sampleRate;
-    
-    // Determine the best frequency estimate
-    let frequency = null;
-    
-    // If autocorrelation gives a strong result, use it
-    if (bestCorrelation > 0.1 && bestPeriod !== -1) { // Lower threshold for better sensitivity
-        frequency = sampleRate / bestPeriod;
-    } else if (avgZeroCrossingRate > 0) {
-        // For sine waves, zero-crossing rate equals twice the frequency
-        // So divide by 2 to get the actual frequency
-        frequency = avgZeroCrossingRate / 2;
-    }
-    
-    // Validate frequency is in reasonable range
-    if (frequency && frequency >= 40 && frequency <= 1200) {
-        // Add the frequency estimate to our collection
-        pitchEstimates.push({
-            frequency: frequency,
-            timestamp: Date.now()
-        });
-        
-        // Filter out estimates older than 1 second
-        const now = Date.now();
-        pitchEstimates = pitchEstimates.filter(estimate => now - estimate.timestamp <= PITCH_DETECTION_WINDOW);
-        
-        // If we have enough estimates, process them
-        if (pitchEstimates.length > 5) { // Need at least 5 estimates to process
-            // Sort by frequency to calculate median
-            const sortedEstimates = [...pitchEstimates].sort((a, b) => a.frequency - b.frequency);
-            
-            // Calculate median frequency
-            const medianIndex = Math.floor(sortedEstimates.length / 2);
-            const medianFrequency = sortedEstimates[medianIndex].frequency;
-            
-            // Count occurrences of each note to find most frequent
-            const noteCounts = {};
-            pitchEstimates.forEach(estimate => {
-                const note = frequencyToNote(estimate.frequency).pitch;
-                noteCounts[note] = (noteCounts[note] || 0) + 1;
+        // Validate frequency is in reasonable range
+        if (frequency >= 80 && frequency <= 1200) { // Within our band-pass filter range
+            // Add the frequency estimate to our collection
+            pitchEstimates.push({
+                frequency: frequency,
+                timestamp: Date.now()
             });
             
-            // Find the most frequent note
-            let mostFrequentNote = null;
-            let maxCount = 0;
-            for (const [note, count] of Object.entries(noteCounts)) {
-                if (count > maxCount) {
-                    maxCount = count;
-                    mostFrequentNote = note;
-                }
-            }
+            // Filter out estimates older than 800ms
+            const now = Date.now();
+            pitchEstimates = pitchEstimates.filter(estimate => now - estimate.timestamp <= 800);
             
-            // Check for stability: pitch should stay within ±30 cents for 300ms
-            if (mostFrequentNote) {
-                // Get all estimates that correspond to the most frequent note
-                const relevantEstimates = pitchEstimates.filter(est => {
-                    const estNote = frequencyToNote(est.frequency).pitch;
-                    return estNote === mostFrequentNote;
-                });
+            // If we have enough estimates, process them
+            if (pitchEstimates.length >= 3) { // Need at least 3 estimates to process
+                // Sort by frequency to calculate median
+                const sortedEstimates = [...pitchEstimates].sort((a, b) => a.frequency - b.frequency);
                 
-                if (relevantEstimates.length > 0) {
-                    // Check if the most recent estimates are stable
-                    const recentTimeThreshold = now - STABLE_DURATION_MS;
-                    const recentStableEstimates = relevantEstimates.filter(est => est.timestamp >= recentTimeThreshold);
+                // Calculate median frequency
+                const medianIndex = Math.floor(sortedEstimates.length / 2);
+                const medianFrequency = sortedEstimates[medianIndex].frequency;
+                
+                // If we have enough stable estimates, report the pitch
+                if (sortedEstimates.length >= 5) { // Require at least 5 estimates for stability
+                    // Calculate interquartile range to check stability
+                    const q1Index = Math.floor(sortedEstimates.length / 4);
+                    const q3Index = Math.floor(3 * sortedEstimates.length / 4);
+                    const q1 = sortedEstimates[q1Index].frequency;
+                    const q3 = sortedEstimates[q3Index].frequency;
+                    const iqr = q3 - q1;
                     
-                    if (recentStableEstimates.length > 0) {
-                        // Calculate the range of recent stable estimates
-                        const recentFrequencies = recentStableEstimates.map(est => est.frequency);
-                        const minFreq = Math.min(...recentFrequencies);
-                        const maxFreq = Math.max(...recentFrequencies);
+                    // Check if the frequency range is stable (within 30 cents)
+                    const minFreq = sortedEstimates[0].frequency;
+                    const maxFreq = sortedEstimates[sortedEstimates.length - 1].frequency;
+                    
+                    // Convert to cents difference
+                    const maxCentsDiff = 1200 * Math.log2(maxFreq / minFreq);
+                    
+                    if (Math.abs(maxCentsDiff) <= CENT_TOLERANCE && !stablePitchDetected) {
+                        // We have a stable pitch!
+                        stablePitchDetected = true;
                         
-                        // Convert to cents difference
-                        const maxCentsDiff = 1200 * Math.log2(maxFreq / minFreq);
+                        // Use the median frequency as our final result
+                        const finalNote = frequencyToNote(medianFrequency);
                         
-                        if (Math.abs(maxCentsDiff) <= CENT_TOLERANCE && !stablePitchDetected) {
-                            // We have a stable pitch!
-                            stablePitchDetected = true;
-                            
-                            // Calculate final frequency as median of stable estimates
-                            const stableMedianIndex = Math.floor(recentStableEstimates.length / 2);
-                            const stableSorted = recentStableEstimates.sort((a, b) => a.frequency - b.frequency);
-                            const finalFrequency = stableSorted[stableMedianIndex].frequency;
-                            const finalNote = frequencyToNote(finalFrequency);
-                            
-                            // Update UI with detected pitch
-                            document.getElementById('detected-pitch-value').textContent = `${finalNote.note} (${Math.round(finalFrequency)} Hz)`;
-                            
-                            // Store the detected pitch for later use
-                            window.detectedPitch = finalNote.pitch;
-                            
-                            // Show the button to use the detected pitch
-                            document.getElementById('use-detected-pitch').style.display = 'block';
-                            
-                            // Stop detection after a good reading
-                            setTimeout(() => {
-                                if (isDetectingPitch) {
-                                    stopPitchDetection();
-                                }
-                            }, 2000); // Stop after 2 seconds to allow for longer listening
-                        }
+                        // Update UI with detected pitch
+                        document.getElementById('detected-pitch-value').textContent = `${finalNote.note} (${Math.round(medianFrequency)} Hz)`;
+                        
+                        // Store the detected pitch for later use
+                        window.detectedPitch = finalNote.pitch;
+                        
+                        // Show the button to use the detected pitch
+                        document.getElementById('use-detected-pitch').style.display = 'block';
+                        
+                        // Stop detection after a good reading
+                        setTimeout(() => {
+                            if (isDetectingPitch) {
+                                stopPitchDetection();
+                            }
+                        }, 2000); // Stop after 2 seconds to allow for longer listening
                     }
                 }
             }
         }
     }
+}
+
+// Band-pass filter implementation using biquad filters
+function applyBandPassFilter(data, sampleRate, lowFreq, highFreq) {
+    // Simple implementation: apply high-pass and low-pass filters
+    const filtered = new Float32Array(data.length);
+    
+    // High-pass filter (remove low frequencies below 80Hz)
+    let y1 = 0, x1 = 0;
+    const highPassFreq = 2 * Math.tan(Math.PI * lowFreq / sampleRate);
+    const a0_hp = 1 + highPassFreq / 2;
+    const b0_hp = 1 / a0_hp;
+    const b1_hp = -1 / a0_hp;
+    
+    for (let i = 0; i < data.length; i++) {
+        const x0 = data[i];
+        const y0 = b0_hp * x0 + b1_hp * x1 - (1 - highPassFreq / 2) / a0_hp * y1;
+        y1 = y0;
+        x1 = x0;
+        filtered[i] = y0;
+    }
+    
+    // Low-pass filter (remove high frequencies above 1200Hz)
+    let y2 = 0, x2 = 0;
+    const lowPassFreq = 2 * Math.tan(Math.PI * highFreq / sampleRate);
+    const a0_lp = 1 + lowPassFreq / 2;
+    const b0_lp = lowPassFreq / 2 / a0_lp;
+    const b1_lp = lowPassFreq / 2 / a0_lp;
+    
+    for (let i = filtered.length - 1; i >= 0; i--) {
+        const x0 = filtered[i];
+        const y0 = b0_lp * x0 + b1_lp * x2 - (1 - lowPassFreq / 2) / a0_lp * y2;
+        y2 = y0;
+        x2 = x0;
+        filtered[i] = y0;
+    }
+    
+    return filtered;
+}
+
+// YIN pitch detection algorithm
+function computeYin(buffer, sampleRate, minFreq, maxFreq, probabilityThreshold) {
+    const bufferSize = buffer.length;
+    const yinBuffer = new Float32Array(bufferSize >> 1); // Half the size
+    
+    // Compute difference function
+    for (let tau = 0; tau < bufferSize >> 1; tau++) {
+        yinBuffer[tau] = 0;
+        for (let j = 0; j < bufferSize >> 1; j++) {
+            const delta = buffer[j] - buffer[j + tau];
+            yinBuffer[tau] += delta * delta;
+        }
+    }
+    
+    // Compute cumulative mean normalized difference function
+    yinBuffer[0] = 1;
+    let runningSum = 0;
+    for (let tau = 1; tau < bufferSize >> 1; tau++) {
+        runningSum += yinBuffer[tau];
+        if (runningSum === 0) {
+            yinBuffer[tau] = 1;
+        } else {
+            yinBuffer[tau] *= tau / runningSum;
+        }
+    }
+    
+    // Find absolute threshold
+    let tau = -1;
+    for (let i = 1; i < bufferSize >> 1; i++) {
+        if (yinBuffer[i] < probabilityThreshold) {
+            while (i + 1 < bufferSize >> 1 && yinBuffer[i + 1] < yinBuffer[i]) {
+                i++;
+            }
+            tau = i;
+            break;
+        }
+    }
+    
+    // If no pitch found within range, return null
+    if (tau === -1) {
+        return null;
+    }
+    
+    // Interpolate for better accuracy
+    const period1 = tau;
+    const period2 = tau > 0 ? tau - 1 : tau;
+    const period3 = tau < yinBuffer.length - 1 ? tau + 1 : tau;
+    
+    if (period1 === 0) return period1;
+    
+    const x = (yinBuffer[period2] - yinBuffer[period3]) / (yinBuffer[period3] - yinBuffer[period1]);
+    const tauEstimate = period1 + x;
+    
+    // Verify the estimated period is within our frequency range
+    const estimatedFreq = sampleRate / tauEstimate;
+    if (estimatedFreq < minFreq || estimatedFreq > maxFreq) {
+        return null;
+    }
+    
+    return tauEstimate;
 }
 
 // Convert frequency to closest musical note
