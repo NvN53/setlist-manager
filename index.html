@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -33,6 +33,8 @@
         .song-item:hover, .setlist-item:hover { background-color:#f9f9f9; }
         .song-title, .setlist-title { font-weight:bold; margin-bottom:5px; }
         .song-details, .setlist-details { color:#666; font-size:.9rem; }
+                .song-actions, .setlist-actions { display: flex; gap: 5px; margin-top: 5px; }
+                .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
         .setlist-song-item { padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .setlist-song-info { flex-grow: 1; }
         .setlist-song-title { font-weight: bold; }
@@ -326,17 +328,18 @@
         <div id="home-songs-page">
             <div class="home-header-fixed">
                 <div class="header">
-                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.1</span></h1>
+                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.4</span></h1>
                     <div class="menu-container">
                         <i class="fas fa-ellipsis-v menu-icon"></i>
                         <div class="dropdown-menu hidden">
                             <div class="menu-item" id="settings-menu-item">Settings</div>
+                            <div class="menu-item" id="account-menu-item-songs">Account</div>
                         </div>
                     </div>
                 </div>
                 <div class="search-box-container">
                     <input type="text" placeholder="Search" class="search-box" id="song-search">
-                    <button class="clear-search-btn hidden" id="clear-song-search">×</button>
+                    <button class="clear-search-btn hidden" id="clear-song-search">A-</button>
                 </div>
                 <div class="tabs">
                     <div class="tab active" id="songs-tab">SONGS</div>
@@ -353,17 +356,18 @@
         <div id="home-setlists-page" class="hidden">
             <div class="home-header-fixed">
                 <div class="header">
-                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.1</span></h1>
+                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.4</span></h1>
                     <div class="menu-container">
                         <i class="fas fa-ellipsis-v menu-icon"></i>
                         <div class="dropdown-menu hidden">
                             <div class="menu-item" id="settings-menu-item-2">Settings</div>
+                            <div class="menu-item" id="account-menu-item-setlists">Account</div>
                         </div>
                     </div>
                 </div>
                 <div class="search-box-container">
                     <input type="text" placeholder="Search" class="search-box" id="setlist-search">
-                    <button class="clear-search-btn hidden" id="clear-setlist-search">×</button>
+                    <button class="clear-search-btn hidden" id="clear-setlist-search">A-</button>
                 </div>
                 <div class="tabs">
                     <div class="tab" id="back-to-songs-tab">SONGS</div>
@@ -418,7 +422,7 @@
                 <label>Add Songs</label>
                 <div class="search-box-container">
                     <input type="text" placeholder="Search songs" class="search-box" id="add-song-search">
-                    <button class="clear-search-btn hidden" id="clear-add-song-search">×</button>
+                    <button class="clear-search-btn hidden" id="clear-add-song-search">A-</button>
                 </div>
                 <div id="available-songs-list">
                     <!-- Available songs will be listed here -->
@@ -564,7 +568,47 @@
                 </div>
             </div>
         </div>
-
+        
+        <!-- Account Page -->
+        <div id="auth-page" class="hidden">
+            <div class="home-header-fixed">
+                <div class="header">
+                    <button class="btn btn-secondary" id="back-to-songs-from-auth"><i class="fas fa-arrow-left"></i></button>
+                    <h2>Account</h2>
+                    <div class="menu-container">
+                        <i class="fas fa-ellipsis-v menu-icon"></i>
+                        <div class="dropdown-menu hidden">
+                            <div class="menu-item" id="auth-menu-item">Sign Out</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="home-content-scrollable">
+                <div class="auth-container" style="padding: 20px;">
+                    <h2>Account</h2>
+                    <div id="auth-content">
+                        <div id="login-form">
+                            <input id="email" type="email" placeholder="Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                            <input id="password" type="password" placeholder="Password" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <button id="signup" class="btn btn-primary" style="flex: 1; padding: 10px;">Sign Up</button>
+                                <button id="login" class="btn btn-secondary" style="flex: 1; padding: 10px;">Log In</button>
+                            </div>
+                            <button id="logout" class="btn btn-outline-danger" style="width: 100%; padding: 10px; display: none;">Log Out</button>
+                        </div>
+                        <pre id="status" style="background: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 10px; white-space: pre-wrap; display: none;"></pre>
+                        <div id="user-info" style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px; display: none;">
+                            <strong>Logged in as:</strong> <span id="user-email"></span>
+                            <div style="margin-top: 10px;">
+                                <button id="auth-logout" class="btn btn-outline-danger" style="width: 100%; padding: 8px;">Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Ambient Pad Modal -->
         <div id="ambient-modal" class="modal-overlay hidden">
             <div class="modal-content">
@@ -618,13 +662,133 @@
 
 <script>
 /* ---------- data & startup (unchanged) ---------- */
-let songs = JSON.parse(localStorage.getItem('setlistManager_songs')) || [
+let songs = [];
+
+// Load songs from Supabase database
+async function loadSongsFromDatabase() {
+    console.log('Loading songs from database...');
+    try {
+        if (window.db) {
+            // Fetch all songs from the database
+            const { data, error } = await window.db
+                .from('songs')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching songs:', error);
+                // If there's an error, set to empty array
+                songs = [];
+            } else {
+                console.log('Fetched songs data:', data);
+                // Map Supabase data to local format
+                songs = data.map(song => ({
+                    id: song.id,
+                    title: song.title,
+                    key: song.key || '',
+                    bpm: song.bpm || 120,  // Default to 120 if not provided
+                    timeSig: '', // timeSig not in DB, so set to empty
+                    lyrics: song.lyrics || '',
+                    user_id: song.user_id  // Include user_id for ownership checks
+                }));
+                console.log('Mapped songs array:', songs);
+            }
+        } else {
+            // If no db available, set to empty array
+            songs = [];
+            console.error('Database not available');
+        }
+    } catch (error) {
+        console.error('Error loading songs:', error);
+        songs = [];
+    }
+    
+    console.log('Final songs array:', songs);
+    // Re-render the song list after loading
+    renderSongsList();
+}
+
+// Load setlists from Supabase database
+async function loadSetlistsFromDatabase() {
+    console.log('Loading setlists from database...');
+    try {
+        if (window.db) {
+            // Fetch all setlists from the database
+            const { data, error } = await window.db
+                .from('setlists')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching setlists:', error);
+                // If there's an error, set to empty array
+                setlists = [];
+            } else {
+                console.log('Fetched setlists data:', data);
+                // Map Supabase data to local format
+                setlists = data.map(setlist => ({
+                    id: setlist.id,
+                    title: setlist.title,
+                    user_id: setlist.user_id  // Include user_id for ownership checks
+                }));
+                
+                // Now fetch the songs for each setlist
+                for (let i = 0; i < setlists.length; i++) {
+                    const setlistId = setlists[i].id;
+                    const { data: setlistSongsData, error: setlistSongsError } = await window.db
+                        .from('setlist_songs')
+                        .select('song_id, position')
+                        .eq('setlist_id', setlistId)
+                        .order('position', { ascending: true });
+                    
+                    if (setlistSongsError) {
+                        console.error('Error fetching setlist songs:', setlistSongsError);
+                        setlists[i].songIds = [];
+                    } else {
+                        setlists[i].songIds = setlistSongsData.map(ss => ss.song_id);
+                    }
+                }
+                console.log('Loaded setlists:', setlists);
+            }
+        } else {
+            // If no db available, set to empty array
+            setlists = [];
+            console.error('Database not available for setlists');
+        }
+    } catch (error) {
+        console.error('Error loading setlists:', error);
+        setlists = [];
+    }
+    
+    // Re-render the setlist list after loading
+    renderSetlistsList();
+}
+
+// Load user preferences from Supabase
+async function loadUserPreferences() {
+    // This function can be expanded to load user-specific preferences
+    // like transpose, bpm override, autoscroll speed, etc.
+    try {
+        if (window.db) {
+            const { data: { user }, error: userError } = await window.db.auth.getUser();
+            if (!userError && user) {
+                // User is logged in, load user-specific preferences if needed
+                console.log('User preferences can be loaded here');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user preferences:', error);
+    }
+}
+
+// Old songs data - keeping for reference
+let oldSongs = JSON.parse(localStorage.getItem('setlistManager_songs')) || [
     { id: 1, title: 'Amazing Grace', key: 'G', bpm: 78, timeSig: '4/4', lyrics: 'G\nAmazing grace, how sweet the sound\nG           C\nThat saved a wretch like me\nG               Em\nI once was lost, but now am found\nG       D          G\nWas blind, but now I see' },
     { id: 2, title: 'Hallelujah', key: 'C', bpm: 68, timeSig: '4/4', lyrics: 'C                    Am\nI\'ve heard there was a secret chord\nF                      C\nThat David played and it pleased the Lord\nG                      Em\nBut you don\'t really care for music, do ya?\nF           C          G\nIt goes like this the fourth, the fifth\nAm                 F\nThe minor fall, the major lift\nG              Em         Am\nThe baffled king composing Hallelujah' },
     { id: 3, title: 'Ente Daivame', key: 'Fm', bpm: 92, timeSig: '4/4', lyrics: 'Fm              C\nEnte daivame nee thanne\nFm              C\nEnte sakhavum nee thanne\nDm              Fm\nEnte snehithanum nee thanne\nC               Fm\nEnikku vendiyavanum nee thanne' }
 ];
 let setlists = JSON.parse(localStorage.getItem('setlistManager_setlists')) || [
-    { id: 1, title: 'Sunday Service – Jan 12', songIds: [1, 2] },
+    { id: 1, title: 'Sunday Service â?" Jan 12', songIds: [1, 2] },
     { id: 2, title: 'Christmas Eve Mass', songIds: [2, 3] },
     { id: 3, title: 'Malayalam Choir Practice', songIds: [3, 1] }
 ];
@@ -955,7 +1119,7 @@ let detectionStartTime = null;
 let stablePitchDetected = false;
 const PITCH_DETECTION_WINDOW = 1000; // Collect estimates for 1 second
 const STABLE_DURATION_MS = 300; // Require stability for 300ms
-const CENT_TOLERANCE = 30; // ±30 cents tolerance
+const CENT_TOLERANCE = 30; // A±30 cents tolerance
 const MIN_AMPLITUDE = 0.01; // Minimum amplitude to consider a signal
 
 // Function to start pitch detection
@@ -1447,7 +1611,29 @@ document.getElementById('settings-menu-item-2').addEventListener('click', functi
     document.querySelector('.dropdown-menu').classList.add('hidden');
 });
 
-document.getElementById('add-song-btn').addEventListener('click', createNewSong);
+// Check auth state before allowing to add song
+async function checkAuthBeforeAddSong() {
+    try {
+        if (window.db) {
+            const { data: { user }, error } = await window.db.auth.getUser();
+            if (user) {
+                // User is logged in, allow adding song
+                createNewSong();
+            } else {
+                // User is not logged in, show auth page
+                showAuthPage();
+            }
+        } else {
+            // DB not initialized, show auth page
+            showAuthPage();
+        }
+    } catch (error) {
+        console.error('Error checking auth state:', error);
+        showAuthPage();
+    }
+}
+
+// Event listener for add song button is set in the DOMContentLoaded event
 document.getElementById('cancel-edit-btn').addEventListener('click', function() {
     if (window.fromLyricsPage && currentSong) {
         // Go back to the lyrics page
@@ -1644,7 +1830,8 @@ document.addEventListener('DOMContentLoaded', function() {
     renderSongsList();
     renderSetlistsList();
     renderPitchButtons();
-    document.getElementById('add-setlist-btn').addEventListener('click', createNewSetlist);
+    document.getElementById('add-setlist-btn').addEventListener('click', checkAuthBeforeAddSetlist);
+    document.getElementById('add-song-btn')?.addEventListener('click', checkAuthBeforeAddSong);
     const metronomeBtn = document.getElementById('metronome-toggle');
     if (metronomeBtn) metronomeBtn.addEventListener('click', toggleMetronome);
     const transposeUpBtn = document.getElementById('transpose-up-lyrics');
@@ -1757,6 +1944,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Home page menu functionality
     // Using a more direct approach to ensure the menu works
     document.addEventListener('click', function(e) {
+        // Check if click is on an account menu item
+        if (e.target.id === 'account-menu-item-songs' || e.target.id === 'account-menu-item-setlists') {
+            // Allow the event to propagate to the specific handler
+            return;
+        }
+        
         // Handle songs page menu
         if (e.target.closest('#home-songs-page .menu-icon')) {
             e.stopPropagation();
@@ -1788,6 +1981,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 dropdown.classList.toggle('hidden');
             }
         }
+        
+        // Close dropdowns when clicking elsewhere
+        if (!e.target.closest('.menu-icon') && !e.target.closest('.dropdown-menu')) {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+        }
     });
 });
 
@@ -1799,7 +1999,19 @@ function showSongsPage() {
     if (metronomeBtn && metronomeBtn.classList.contains('active')) {
         metronomeBtn.classList.remove('active');
     }
-    stopAutoscroll(); homeSongsPage.classList.remove('hidden'); homeSetlistsPage.classList.add('hidden'); editSongPage.classList.add('hidden'); editSetlistPage.classList.add('hidden'); viewSetlistPage.classList.add('hidden'); lyricsPage.classList.add('hidden'); settingsPage.classList.add('hidden'); ambientModal.classList.add('hidden'); clearSetlistContext(); }
+    stopAutoscroll();
+    homeSongsPage.classList.remove('hidden');
+    homeSetlistsPage.classList.add('hidden');
+    editSongPage.classList.add('hidden');
+    editSetlistPage.classList.add('hidden');
+    viewSetlistPage.classList.add('hidden');
+    lyricsPage.classList.add('hidden');
+    settingsPage.classList.add('hidden');
+    ambientModal.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
+    clearSetlistContext();
+}
 function showSetlistsPage() { 
     // Turn off metronome when exiting lyrics page
     stopMetronome();
@@ -1807,10 +2019,48 @@ function showSetlistsPage() {
     if (metronomeBtn && metronomeBtn.classList.contains('active')) {
         metronomeBtn.classList.remove('active');
     }
-    stopAutoscroll(); homeSongsPage.classList.add('hidden'); homeSetlistsPage.classList.remove('hidden'); editSongPage.classList.add('hidden'); editSetlistPage.classList.add('hidden'); viewSetlistPage.classList.add('hidden'); lyricsPage.classList.add('hidden'); settingsPage.classList.add('hidden'); ambientModal.classList.add('hidden'); clearSetlistContext(); }
-function showViewSetlistPage(setlist) { stopMetronome(); stopAutoscroll(); homeSongsPage.classList.add('hidden'); homeSetlistsPage.classList.add('hidden'); editSongPage.classList.add('hidden'); editSetlistPage.classList.add('hidden'); viewSetlistPage.classList.remove('hidden'); lyricsPage.classList.add('hidden'); settingsPage.classList.add('hidden'); ambientModal.classList.add('hidden'); currentSetlist = setlist; document.getElementById('view-setlist-title').textContent = setlist.title; renderViewSetlistSongs(setlist.songIds); }
+    stopAutoscroll();
+    homeSongsPage.classList.add('hidden');
+    homeSetlistsPage.classList.remove('hidden');
+    editSongPage.classList.add('hidden');
+    editSetlistPage.classList.add('hidden');
+    viewSetlistPage.classList.add('hidden');
+    lyricsPage.classList.add('hidden');
+    settingsPage.classList.add('hidden');
+    ambientModal.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
+    clearSetlistContext();
+}
+function showViewSetlistPage(setlist) {
+    stopMetronome();
+    stopAutoscroll();
+    homeSongsPage.classList.add('hidden');
+    homeSetlistsPage.classList.add('hidden');
+    editSongPage.classList.add('hidden');
+    editSetlistPage.classList.add('hidden');
+    viewSetlistPage.classList.remove('hidden');
+    lyricsPage.classList.add('hidden');
+    settingsPage.classList.add('hidden');
+    ambientModal.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
+    currentSetlist = setlist;
+    document.getElementById('view-setlist-title').textContent = setlist.title;
+    renderViewSetlistSongs(setlist.songIds);
+}
 function showEditSongPage(song = null) {
-    stopMetronome(); stopAutoscroll(); homeSongsPage.classList.add('hidden'); homeSetlistsPage.classList.add('hidden'); editSongPage.classList.remove('hidden'); editSetlistPage.classList.add('hidden'); lyricsPage.classList.add('hidden'); settingsPage.classList.add('hidden'); ambientModal.classList.add('hidden');
+    stopMetronome();
+    stopAutoscroll();
+    homeSongsPage.classList.add('hidden');
+    homeSetlistsPage.classList.add('hidden');
+    editSongPage.classList.remove('hidden');
+    editSetlistPage.classList.add('hidden');
+    lyricsPage.classList.add('hidden');
+    settingsPage.classList.add('hidden');
+    ambientModal.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
     if (song) {
         editingSongId = song.id;
         document.getElementById('song-title').value = song.title;
@@ -1825,7 +2075,7 @@ function showEditSongPage(song = null) {
         
         document.getElementById('song-key').value = key;
         document.getElementById('song-mode').value = mode;
-        document.getElementById('song-bpm').value = song.bpm;
+        document.getElementById('song-bpm').value = song.bpm || 120;  // Default to 120 if not provided
         document.getElementById('song-time-sig').value = song.timeSig;
         document.getElementById('song-lyrics').value = song.lyrics;
         document.getElementById('delete-song-btn').style.display = 'block';
@@ -1834,13 +2084,14 @@ function showEditSongPage(song = null) {
         document.getElementById('song-title').value = '';
         document.getElementById('song-key').value = 'C';
         document.getElementById('song-mode').value = 'major';
-        document.getElementById('song-bpm').value = 120;
+        document.getElementById('song-bpm').value = 120;  // Default for new songs
         document.getElementById('song-time-sig').value = '4/4';
         document.getElementById('song-lyrics').value = '';
         document.getElementById('delete-song-btn').style.display = 'none';
     }
 }
 function showLyricsPage(song) {
+    console.log('showLyricsPage called with song:', song);
     stopMetronome();
     stopAutoscroll();
     // Reset autoscroll controls when showing a new song
@@ -1856,7 +2107,16 @@ function showLyricsPage(song) {
         autoscrollLevel.disabled = true;
     }
     
-    homeSongsPage.classList.add('hidden'); homeSetlistsPage.classList.add('hidden'); editSongPage.classList.add('hidden'); editSetlistPage.classList.add('hidden'); viewSetlistPage.classList.add('hidden'); lyricsPage.classList.remove('hidden'); settingsPage.classList.add('hidden'); ambientModal.classList.add('hidden');
+    homeSongsPage.classList.add('hidden');
+    homeSetlistsPage.classList.add('hidden');
+    editSongPage.classList.add('hidden');
+    editSetlistPage.classList.add('hidden');
+    viewSetlistPage.classList.add('hidden');
+    lyricsPage.classList.remove('hidden');
+    settingsPage.classList.add('hidden');
+    ambientModal.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
     
     // Reset transpose value when showing a new song
     transposeValue = 0;
@@ -1864,6 +2124,7 @@ function showLyricsPage(song) {
     document.getElementById('transpose-value').textContent = (transposeValue > 0 ? '+' : '') + transposeValue;
     
     currentSong = songs.find(s => s.id === song.id) || song;
+    console.log('Setting currentSong to:', currentSong);
     document.getElementById('lyrics-title').textContent = currentSong.title;
     document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
     
@@ -1879,6 +2140,7 @@ function showLyricsPage(song) {
     // Hide navigation buttons by default
     document.getElementById('prev-song-btn').style.display = 'none';
     document.getElementById('next-song-btn').style.display = 'none';
+    console.log('Lyrics page displayed for song:', currentSong.title);
 }
 
 function showLyricsPageFromSetlist(song, songIds, currentIndex) {
@@ -1897,7 +2159,16 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
         autoscrollLevel.disabled = true;
     }
     
-    homeSongsPage.classList.add('hidden'); homeSetlistsPage.classList.add('hidden'); editSongPage.classList.add('hidden'); editSetlistPage.classList.add('hidden'); viewSetlistPage.classList.add('hidden'); lyricsPage.classList.remove('hidden'); settingsPage.classList.add('hidden'); ambientModal.classList.add('hidden');
+    homeSongsPage.classList.add('hidden');
+    homeSetlistsPage.classList.add('hidden');
+    editSongPage.classList.add('hidden');
+    editSetlistPage.classList.add('hidden');
+    viewSetlistPage.classList.add('hidden');
+    lyricsPage.classList.remove('hidden');
+    settingsPage.classList.add('hidden');
+    ambientModal.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
     
     // Reset transpose value when showing a new song
     transposeValue = 0;
@@ -1982,6 +2253,21 @@ function hideAmbientPad(){
     ambientModal.classList.add('hidden'); 
 }
 
+function showAuthPage() {
+    // Hide all other pages
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    
+    // Show auth page
+    document.getElementById('auth-page')?.classList.remove('hidden');
+}
+
 function showSettingsPage() {
     // Turn off metronome when exiting lyrics page
     stopMetronome();
@@ -1991,13 +2277,15 @@ function showSettingsPage() {
     }
     
     // Hide all other pages
-    homeSongsPage.classList.add('hidden');
-    homeSetlistsPage.classList.add('hidden');
-    editSongPage.classList.add('hidden');
-    editSetlistPage.classList.add('hidden');
-    viewSetlistPage.classList.add('hidden');
-    lyricsPage.classList.add('hidden');
-    ambientModal.classList.add('hidden');
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    // Make sure auth page is hidden
+    document.getElementById('auth-page')?.classList.add('hidden');
     
     // Show settings page
     settingsPage.classList.remove('hidden');
@@ -2048,7 +2336,7 @@ function navigateToNextSong() {
 
 /* ---------- small utilities ---------- */
 function isChordToken(tok) {
-    return /^[A-G][#b]?(m|dim|aug|sus|Maj|min|\+|°)?(\/[A-G][#b]?)?$/.test(tok);
+    return /^[A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?$/.test(tok);
 }
 
 /* ---------- rendering lists ---------- */
@@ -2056,18 +2344,149 @@ function renderSongsList(filteredSongs = null) {
     const songsList = document.getElementById('songs-list');
     const songsToRender = filteredSongs || songs;
     songsList.innerHTML = songsToRender.map(song => `
-        <div class="song-item" data-id="${song.id}">
+        <div class="song-item" data-id="${song.id}" data-user-id="${song.user_id}">
             <div class="song-title">${song.title}</div>
             <div class="song-details">${song.key} • ${song.bpm} bpm</div>
         </div>
     `).join('');
-    document.querySelectorAll('.song-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const songId = parseInt(item.getAttribute('data-id'));
-            const song = songs.find(s => s.id === songId);
-            if (song) showLyricsPage(song);
+    
+    // Update action buttons after a short delay to allow DOM to render
+    setTimeout(updateSongActionButtons, 100);
+    
+    // Add click handlers to song items after a short delay
+    setTimeout(() => {
+        document.querySelectorAll('.song-item').forEach(item => {
+            // Remove any existing click listeners to prevent duplicates
+            if (item._songClickListenerAdded) {
+                return;
+            }
+            
+            item._songClickListenerAdded = true;
+            
+            item.addEventListener('click', function() {
+                console.log('Song item clicked');
+                // Get the song ID from the data attribute
+                const dataId = item.getAttribute('data-id');
+                console.log('Raw data-id attribute:', dataId);
+                const songId = dataId ? parseInt(dataId) : null;
+                console.log('Parsed song ID:', songId);
+                // Find the corresponding song in the songs array
+                console.log('Songs array:', songs);
+                const song = songs.find(s => s.id === songId);
+                console.log('Found song:', song);
+                // If song exists, show the lyrics page
+                if (song) {
+                    console.log('Calling showLyricsPage with:', song);
+                    showLyricsPage(song);
+                } else {
+                    console.error('Song not found with ID:', songId, 'or data-id was not set');
+                    // As fallback, try to find a song by title if available
+                    const titleElement = item.querySelector('.song-title');
+                    if (titleElement) {
+                        const title = titleElement.textContent;
+                        const fallbackSong = songs.find(s => s.title === title);
+                        if (fallbackSong) {
+                            console.log('Found fallback song by title:', fallbackSong);
+                            showLyricsPage(fallbackSong);
+                        }
+                    }
+                }
+            });
         });
-    });
+    }, 50); // Small delay to ensure DOM is ready
+}
+
+// Update song action buttons based on ownership
+async function updateSongActionButtons() {
+  const songItems = document.querySelectorAll('.song-item');
+  
+  for (const item of songItems) {
+    const songId = parseInt(item.getAttribute('data-id'));
+    const songUserId = item.getAttribute('data-user-id');
+    
+    let isOwner = false;
+    let isLoggedIn = false;
+    
+    if (window.db) {
+      try {
+        const { data: { user }, error } = await window.db.auth.getUser();
+        if (!error && user) {
+          isLoggedIn = true;
+          if (songUserId) {
+            isOwner = user.id === songUserId;
+          }
+        }
+      } catch (e) {
+        console.error('Error checking auth state:', e);
+      }
+    }
+    
+    // Update the UI based on ownership
+    const detailsEl = item.querySelector('.song-details');
+    if (detailsEl) {
+      detailsEl.textContent = detailsEl.textContent.replace(' (Mine)', '').trim();
+      if (isOwner) {
+        detailsEl.textContent += ' (Mine)';
+      }
+    }
+    
+    // Add action buttons based on ownership and login status
+    let actionsContainer = item.querySelector('.song-actions');
+    if (!actionsContainer) {
+      actionsContainer = document.createElement('div');
+      actionsContainer.className = 'song-actions';
+      item.appendChild(actionsContainer);
+    }
+    
+    // Clear existing buttons
+    actionsContainer.innerHTML = '';
+    
+    // Add buttons based on conditions
+    if (isLoggedIn && !isOwner) {
+      const duplicateBtn = document.createElement('button');
+      duplicateBtn.className = 'btn btn-sm btn-secondary duplicate-song-btn';
+      duplicateBtn.textContent = 'Duplicate';
+      duplicateBtn.dataset.songId = songId;
+      duplicateBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Trigger duplicate functionality
+        const song = songs.find(s => s.id === songId);
+        if (song) {
+          // Set up the form with song data to duplicate
+          document.getElementById('song-title').value = song.title;
+          document.getElementById('song-key').value = song.key;
+          document.getElementById('song-bpm').value = song.bpm;
+          document.getElementById('song-lyrics').value = song.lyrics;
+          
+          // Parse key to separate key and mode
+          let key = song.key;
+          let mode = 'major';
+          if (key.endsWith('m')) {
+            key = key.substring(0, key.length - 1); // Remove 'm'
+            mode = 'minor';
+          }
+          document.getElementById('song-key').value = key;
+          document.getElementById('song-mode').value = mode;
+          
+          duplicateSong();
+        }
+      });
+      actionsContainer.appendChild(duplicateBtn);
+    }
+    
+    if (isOwner) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-sm btn-warning edit-song-btn';
+      editBtn.textContent = 'Edit';
+      editBtn.dataset.songId = songId;
+      editBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const song = songs.find(s => s.id === songId);
+        if (song) showEditSongPage(song);
+      });
+      actionsContainer.appendChild(editBtn);
+    }
+  }
 }
 
 function renderSetlistsList(filteredSetlists = null) {
@@ -2076,19 +2495,43 @@ function renderSetlistsList(filteredSetlists = null) {
     setlistsList.innerHTML = setlistsToRender.map(setlist => {
         // Calculate actual song count
         const songCount = setlist.songIds ? setlist.songIds.length : 0;
+        
+        // Note: We can't determine ownership in the render function due to async nature of auth
+        // We'll handle this in the click handler
+        const isPlaceholder = true; // Placeholder for template
+        
         return `
-        <div class="setlist-item" data-id="${setlist.id}">
+        <div class="setlist-item" data-id="${setlist.id}" data-user-id="${setlist.user_id}">
             <div class="setlist-title">${setlist.title}</div>
             <div class="setlist-details">${songCount} songs</div>
         </div>`;
     }).join('');
-    document.querySelectorAll('.setlist-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const setlistId = parseInt(item.getAttribute('data-id'));
+    
+    // Add event listeners for setlist items
+    const setlistItems = document.querySelectorAll('.setlist-item');
+    setlistItems.forEach(item => {
+        const setlistId = parseInt(item.getAttribute('data-id'));
+        
+        // Add click handler for viewing setlist
+        item.onclick = async (e) => {
+            // Check if the click was on an action button
+            if (e.target.classList.contains('duplicate-setlist-btn')) {
+                await duplicateSetlist(setlistId);
+                return;
+            } else if (e.target.classList.contains('edit-setlist-btn')) {
+                const setlist = setlists.find(s => s.id === setlistId);
+                if (setlist) showEditSetlistPage(setlist);
+                return;
+            }
+            
+            // Otherwise, show the setlist
             const setlist = setlists.find(s => s.id === setlistId);
             if (setlist) showViewSetlistPage(setlist);
-        });
+        };
     });
+    
+    // Update action buttons after a short delay to allow DOM to render
+    setTimeout(updateSetlistActionButtons, 100);
 }
 
 /* ---------- ambient UI ---------- */
@@ -2302,15 +2745,15 @@ function transposeLyricsContent(lyrics, steps, noteIndex, notes) {
     if (!lyrics) return lyrics;
     return lyrics.split('\n').map(line => {
         if (line.includes('[') && line.includes(']')) {
-            return line.replace(/\[([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|°)?(\/[A-G][#b]?)?)\]/g, (m,chord) => {
+            return line.replace(/\[([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?)\]/g, (m,chord) => {
                 return `[${transposeSingleChord(chord, noteIndex, notes, steps)}]`;
             });
         } else if (line.includes('(') && line.includes(')')) {
-            return line.replace(/\(([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|°)?(\/[A-G][#b]?)?)\)/g, (m,chord) => {
+            return line.replace(/\(([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?)\)/g, (m,chord) => {
                 return `(${transposeSingleChord(chord, noteIndex, notes, steps)})`;
             });
-        } else if (/^([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|°)?(\/[A-G][#b]?)?\s*)+$/.test(line.trim())) {
-            return line.replace(/([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|°)?(\/[A-G][#b]?)?)/g, (m) => transposeSingleChord(m, noteIndex, notes, steps));
+        } else if (/^([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?\s*)+$/.test(line.trim())) {
+            return line.replace(/([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?)/g, (m) => transposeSingleChord(m, noteIndex, notes, steps));
         }
         return line;
     }).join('\n');
@@ -2382,6 +2825,28 @@ function createNewSetlist() {
   showEditSetlistPage(null);
 }
 
+// Check auth state before allowing to add setlist
+async function checkAuthBeforeAddSetlist() {
+  try {
+    if (window.db) {
+      const { data: { user }, error } = await window.db.auth.getUser();
+      if (user) {
+        // User is logged in, allow adding setlist
+        createNewSetlist();
+      } else {
+        // User is not logged in, show auth page
+        showAuthPage();
+      }
+    } else {
+      // DB not initialized, show auth page
+      showAuthPage();
+    }
+  } catch (error) {
+    console.error('Error checking auth state:', error);
+    showAuthPage();
+  }
+}
+
 // Show the setlist editor (editing existing setlist or creating new)
 function showEditSetlistPage(setlist = null, fromViewSetlist = false) {
   homeSongsPage.classList.add('hidden');
@@ -2426,8 +2891,8 @@ function showEditSetlistPage(setlist = null, fromViewSetlist = false) {
   renderAvailableSongs();
 }
 
-// Save the setlist to storage (new or existing)
-function saveSetlist() {
+// Save the setlist to Supabase database (new or existing)
+async function saveSetlist() {
   const title = document.getElementById('setlist-title').value.trim();
   if (!title) {
     alert('Please enter a setlist title');
@@ -2441,47 +2906,367 @@ function saveSetlist() {
     if (!isNaN(id)) songIds.push(id);
   });
 
-  if (editingSetlistId) {
-    // Update existing
-    const index = setlists.findIndex(s => s.id === editingSetlistId);
-    if (index !== -1) {
-      setlists[index] = { id: editingSetlistId, title, songIds };
+  try {
+    if (!window.db) {
+      throw new Error('Database not initialized');
     }
-  } else {
-    // Create new
-    const newSetlist = { id: Date.now(), title, songIds };
-    setlists.push(newSetlist);
-  }
-
-  localStorage.setItem('setlistManager_setlists', JSON.stringify(setlists));
-  renderSetlistsList();
-  
-  // Navigate back appropriately
-  if (cameFromViewSetlist && editingSetlistId) {
-    // Find the updated setlist and show it
-    const updatedSetlist = setlists.find(s => s.id === editingSetlistId);
-    if (updatedSetlist) {
-      showViewSetlistPage(updatedSetlist);
+    
+    // Get current user
+    const { data: { user }, error: userError } = await window.db.auth.getUser();
+    
+    if (userError || !user) {
+      // If user is not logged in, redirect to auth page
+      showAuthPage();
+      return;
+    }
+    
+    // Prepare setlist data
+    const setlistData = {
+      title,
+      user_id: user.id  // Include user_id as required
+    };
+    
+    if (editingSetlistId) {
+      // Check if user owns this setlist
+      const { data: existingSetlist, error: fetchError } = await window.db
+        .from('setlists')
+        .select('user_id')
+        .eq('id', editingSetlistId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching setlist:', fetchError);
+        alert('Error accessing setlist: ' + fetchError.message);
+        return;
+      }
+      
+      if (existingSetlist.user_id !== user.id) {
+        alert('You can only edit your own setlists');
+        return;
+      }
+      
+      // Update existing setlist
+      const { error } = await window.db
+        .from('setlists')
+        .update(setlistData)
+        .eq('id', editingSetlistId);
+      
+      if (error) {
+        console.error('Error updating setlist:', error);
+        alert('Error updating setlist: ' + error.message);
+        return;
+      }
+      
+      // Delete existing setlist_songs entries
+      const { error: deleteError } = await window.db
+        .from('setlist_songs')
+        .delete()
+        .eq('setlist_id', editingSetlistId);
+      
+      if (deleteError) {
+        console.error('Error clearing setlist songs:', deleteError);
+        alert('Error updating setlist songs: ' + deleteError.message);
+        return;
+      }
+      
+      // Insert new setlist_songs entries
+      if (songIds.length > 0) {
+        const setlistSongsData = songIds.map((songId, index) => ({
+          setlist_id: editingSetlistId,
+          song_id: songId,
+          position: index
+        }));
+        
+        const { error: insertSongsError } = await window.db
+          .from('setlist_songs')
+          .insert(setlistSongsData);
+        
+        if (insertSongsError) {
+          console.error('Error inserting setlist songs:', insertSongsError);
+          alert('Error saving setlist songs: ' + insertSongsError.message);
+          return;
+        }
+      }
+      
+      // Update in local setlists array
+      const index = setlists.findIndex(s => s.id === editingSetlistId);
+      if (index !== -1) {
+        setlists[index] = { id: editingSetlistId, title, songIds, user_id: user.id };
+      }
+    } else {
+      // Insert new setlist
+      const { data, error } = await window.db
+        .from('setlists')
+        .insert([setlistData]);
+      
+      if (error) {
+        console.error('Error inserting setlist:', error);
+        alert('Error saving setlist: ' + error.message);
+        return;
+      }
+      
+      // Get the newly created setlist ID
+      const newSetlistId = data[0].id;
+      
+      // Insert setlist_songs entries
+      if (songIds.length > 0) {
+        const setlistSongsData = songIds.map((songId, index) => ({
+          setlist_id: newSetlistId,
+          song_id: songId,
+          position: index
+        }));
+        
+        const { error: insertSongsError } = await window.db
+          .from('setlist_songs')
+          .insert(setlistSongsData);
+        
+        if (insertSongsError) {
+          console.error('Error inserting setlist songs:', insertSongsError);
+          alert('Error saving setlist songs: ' + insertSongsError.message);
+          return;
+        }
+      }
+    }
+    
+    // Re-fetch setlists from database to ensure latest data
+    await loadSetlistsFromDatabase();
+    
+    // Navigate back appropriately
+    if (cameFromViewSetlist && editingSetlistId) {
+      // Find the updated setlist and show it
+      const updatedSetlist = setlists.find(s => s.id === editingSetlistId);
+      if (updatedSetlist) {
+        showViewSetlistPage(updatedSetlist);
+      } else {
+        showSetlistsPage();
+      }
     } else {
       showSetlistsPage();
     }
-  } else {
-    showSetlistsPage();
+  } catch (error) {
+    console.error('Error in saveSetlist:', error);
+    alert('Error saving setlist: ' + error.message);
   }
 }
 
 // Delete setlist (already wired to button)
-function deleteSetlist() {
+async function deleteSetlist() {
   if (editingSetlistId && confirm('Are you sure you want to delete this setlist?')) {
-    setlists = setlists.filter(s => s.id !== editingSetlistId);
-    localStorage.setItem('setlistManager_setlists', JSON.stringify(setlists));
-    renderSetlistsList();
+    try {
+      if (!window.db) {
+        throw new Error('Database not initialized');
+      }
       
-    // Navigate back appropriately
-    if (cameFromViewSetlist) {
-      showSetlistsPage();
-    } else {
-      showSetlistsPage();
+      // Get current user
+      const { data: { user }, error: userError } = await window.db.auth.getUser();
+      
+      if (userError || !user) {
+        // If user is not logged in, redirect to auth page
+        showAuthPage();
+        return;
+      }
+      
+      // Check if user owns this setlist
+      const { data: existingSetlist, error: fetchError } = await window.db
+        .from('setlists')
+        .select('user_id')
+        .eq('id', editingSetlistId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching setlist:', fetchError);
+        alert('Error accessing setlist: ' + fetchError.message);
+        return;
+      }
+      
+      if (existingSetlist.user_id !== user.id) {
+        alert('You can only delete your own setlists');
+        return;
+      }
+      
+      // Delete from Supabase database
+      const { error } = await window.db
+        .from('setlists')
+        .delete()
+        .match({ id: editingSetlistId, user_id: user.id }); // Ensure user owns the setlist
+      
+      if (error) {
+        console.error('Error deleting setlist:', error);
+        alert('Error deleting setlist: ' + error.message);
+        return;
+      }
+      
+      // Also delete related setlist_songs entries (handled by cascade)
+      
+      // Re-fetch setlists from database to ensure latest data
+      await loadSetlistsFromDatabase();
+      
+      // Navigate back appropriately
+      if (cameFromViewSetlist) {
+        showSetlistsPage();
+      } else {
+        showSetlistsPage();
+      }
+    } catch (error) {
+      console.error('Error in deleteSetlist:', error);
+      alert('Error deleting setlist: ' + error.message);
+    }
+  }
+}
+
+// Duplicate setlist functionality
+async function duplicateSetlist(setlistId) {
+  try {
+    if (!window.db) {
+      throw new Error('Database not initialized');
+    }
+    
+    // Get current user
+    const { data: { user }, error: userError } = await window.db.auth.getUser();
+    
+    if (userError || !user) {
+      // If user is not logged in, redirect to auth page
+      showAuthPage();
+      return;
+    }
+    
+    // Get the original setlist and its songs
+    const { data: originalSetlist, error: setlistError } = await window.db
+      .from('setlists')
+      .select('*')
+      .eq('id', setlistId)
+      .single();
+    
+    if (setlistError) {
+      console.error('Error fetching original setlist:', setlistError);
+      alert('Error accessing setlist: ' + setlistError.message);
+      return;
+    }
+    
+    // Get the original setlist songs
+    const { data: originalSetlistSongs, error: songsError } = await window.db
+      .from('setlist_songs')
+      .select('*')
+      .eq('setlist_id', setlistId)
+      .order('position', { ascending: true });
+    
+    if (songsError) {
+      console.error('Error fetching original setlist songs:', songsError);
+      alert('Error accessing setlist songs: ' + songsError.message);
+      return;
+    }
+    
+    // Create a new setlist for the current user
+    const newSetlistTitle = originalSetlist.title + ' (Copy)';
+    
+    const newSetlistData = {
+      title: newSetlistTitle,
+      user_id: user.id  // Set to current user
+    };
+    
+    // Insert the new setlist
+    const { data: newSetlist, error: insertError } = await window.db
+      .from('setlists')
+      .insert([newSetlistData]);
+    
+    if (insertError) {
+      console.error('Error creating new setlist:', insertError);
+      alert('Error duplicating setlist: ' + insertError.message);
+      return;
+    }
+    
+    // Get the new setlist ID
+    const newSetlistId = newSetlist[0].id;
+    
+    // Create the setlist_songs entries for the new setlist
+    if (originalSetlistSongs.length > 0) {
+      const newSetlistSongsData = originalSetlistSongs.map((song, index) => ({
+        setlist_id: newSetlistId,
+        song_id: song.song_id,
+        position: song.position  // Keep original positions
+      }));
+      
+      const { error: insertSongsError } = await window.db
+        .from('setlist_songs')
+        .insert(newSetlistSongsData);
+      
+      if (insertSongsError) {
+        console.error('Error copying setlist songs:', insertSongsError);
+        alert('Error duplicating setlist songs: ' + insertSongsError.message);
+        return;
+      }
+    }
+    
+    // Re-fetch setlists from database to ensure latest data
+    await loadSetlistsFromDatabase();
+    
+    alert('Setlist duplicated successfully!');
+  } catch (error) {
+    console.error('Error in duplicateSetlist:', error);
+    alert('Error duplicating setlist: ' + error.message);
+  }
+}
+
+// Update setlist action buttons based on ownership
+async function updateSetlistActionButtons() {
+  const setlistItems = document.querySelectorAll('.setlist-item');
+  
+  for (const item of setlistItems) {
+    const setlistId = parseInt(item.getAttribute('data-id'));
+    const setlistUserId = item.getAttribute('data-user-id');
+    
+    let isOwner = false;
+    let isLoggedIn = false;
+    
+    if (window.db) {
+      try {
+        const { data: { user }, error } = await window.db.auth.getUser();
+        if (!error && user) {
+          isLoggedIn = true;
+          if (setlistUserId) {
+            isOwner = user.id === setlistUserId;
+          }
+        }
+      } catch (e) {
+        console.error('Error checking auth state:', e);
+      }
+    }
+    
+    // Update the UI based on ownership
+    const detailsEl = item.querySelector('.setlist-details');
+    if (detailsEl) {
+      detailsEl.textContent = detailsEl.textContent.replace(' (Mine)', '').trim();
+      if (isOwner) {
+        detailsEl.textContent += ' (Mine)';
+      }
+    }
+    
+    // Add action buttons based on ownership and login status
+    let actionsContainer = item.querySelector('.setlist-actions');
+    if (!actionsContainer) {
+      actionsContainer = document.createElement('div');
+      actionsContainer.className = 'setlist-actions';
+      item.appendChild(actionsContainer);
+    }
+    
+    // Clear existing buttons
+    actionsContainer.innerHTML = '';
+    
+    // Add buttons based on conditions
+    if (isLoggedIn && !isOwner) {
+      const duplicateBtn = document.createElement('button');
+      duplicateBtn.className = 'btn btn-sm btn-secondary duplicate-setlist-btn';
+      duplicateBtn.textContent = 'Duplicate';
+      duplicateBtn.dataset.setlistId = setlistId;
+      actionsContainer.appendChild(duplicateBtn);
+    }
+    
+    if (isOwner) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-sm btn-warning edit-setlist-btn';
+      editBtn.textContent = 'Edit';
+      editBtn.dataset.setlistId = setlistId;
+      actionsContainer.appendChild(editBtn);
     }
   }
 }
@@ -2537,14 +3322,14 @@ function renderSetlistSongs(songIds) {
 
     el.innerHTML = `
       <div class="setlist-song-info" style="display:flex;align-items:center;gap:10px;">
-        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;">☰</span>
+        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;">â~°</span>
         <div style="min-width:0">
           <div class="setlist-song-title">${escapeHtml(song.title)}</div>
           <div class="setlist-song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button class="remove-song-btn" title="Remove">×</button>
+        <button class="remove-song-btn" title="Remove">A-</button>
       </div>
     `;
 
@@ -2697,7 +3482,7 @@ function editSong(song) {
     showEditSongPage(song); 
 }
 
-function saveSong() {
+async function saveSong() {
     const title = document.getElementById('song-title').value;
     const key = document.getElementById('song-key').value;
     const mode = document.getElementById('song-mode').value;
@@ -2709,43 +3494,122 @@ function saveSong() {
     // Combine key and mode for display (e.g., "C major" or "Am minor")
     const displayKey = mode === 'minor' ? key + 'm' : key;
     
-    let savedSong;
-    if (editingSongId) {
-        const index = songs.findIndex(s => s.id === editingSongId);
-        if (index !== -1) {
-            songs[index] = { id: editingSongId, title, key: displayKey, bpm, timeSig, lyrics };
-            savedSong = songs[index];
+    try {
+        if (!window.db) {
+            throw new Error('Database not initialized');
         }
-    } else {
-        const newSong = { id: Date.now(), title, key: displayKey, bpm, timeSig, lyrics };
-        songs.push(newSong);
-        savedSong = newSong;
-    }
-    
-    localStorage.setItem('setlistManager_songs', JSON.stringify(songs));
-    renderSongsList();
-    
-    // If we came from the lyrics page, go back to it
-    if (window.fromLyricsPage) {
-        // Update currentSong with the saved song data
-        currentSong = savedSong;
-        showLyricsPage(savedSong);
-        window.fromLyricsPage = false;
-    } else {
-        showSongsPage();
+        
+        // Get current user
+        const { data: { user }, error: userError } = await window.db.auth.getUser();
+        
+        if (userError || !user) {
+            // If user is not logged in, redirect to auth page
+            showAuthPage();
+            return;
+        }
+        
+        // Prepare song data
+        const songData = {
+            title,
+            key: displayKey,
+            bpm: bpm || 120,  // Default to 120 if not provided
+            lyrics,
+            user_id: user.id  // Include user_id as required
+        };
+        
+        if (editingSongId) {
+            // Update existing song
+            const { error } = await window.db
+                .from('songs')
+                .update(songData)
+                .eq('id', editingSongId);
+            
+            if (error) {
+                console.error('Error updating song:', error);
+                alert('Error updating song: ' + error.message);
+                return;
+            }
+            
+            // Update in local songs array
+            const index = songs.findIndex(s => s.id === editingSongId);
+            if (index !== -1) {
+                songs[index] = { ...songs[index], title, key: displayKey, bpm, lyrics };
+            }
+        } else {
+            // Insert new song
+            const { data, error } = await window.db
+                .from('songs')
+                .insert([songData]);
+            
+            if (error) {
+                console.error('Error inserting song:', error);
+                alert('Error saving song: ' + error.message);
+                return;
+            }
+        }
+        
+        // Re-fetch songs from database to ensure latest data
+        await loadSongsFromDatabase();
+        
+        // If we came from the lyrics page, go back to it
+        if (window.fromLyricsPage) {
+            // Find the saved song in the updated list
+            const savedSong = songs.find(s => s.title === title && s.key === displayKey);
+            if (savedSong) {
+                currentSong = savedSong;
+                showLyricsPage(savedSong);
+                window.fromLyricsPage = false;
+            } else {
+                showSongsPage();
+            }
+        } else {
+            showSongsPage();
+        }
+    } catch (error) {
+        console.error('Error in saveSong:', error);
+        alert('Error saving song: ' + error.message);
     }
 }
 
-function deleteSong() {
+async function deleteSong() {
     if (editingSongId && confirm('Are you sure you want to delete this song?')) {
-        songs = songs.filter(s => s.id !== editingSongId);
-        localStorage.setItem('setlistManager_songs', JSON.stringify(songs));
-        renderSongsList();
-        showSongsPage();
+        try {
+            if (!window.db) {
+                throw new Error('Database not initialized');
+            }
+            
+            // Get current user
+            const { data: { user }, error: userError } = await window.db.auth.getUser();
+            
+            if (userError || !user) {
+                // If user is not logged in, redirect to auth page
+                showAuthPage();
+                return;
+            }
+            
+            // Delete from Supabase database
+            const { error } = await window.db
+                .from('songs')
+                .delete()
+                .match({ id: editingSongId, user_id: user.id }); // Ensure user owns the song
+            
+            if (error) {
+                console.error('Error deleting song:', error);
+                alert('Error deleting song: ' + error.message);
+                return;
+            }
+            
+            // Re-fetch songs from database to ensure latest data
+            await loadSongsFromDatabase();
+            showSongsPage();
+        } catch (error) {
+            console.error('Error in deleteSong:', error);
+            alert('Error deleting song: ' + error.message);
+        }
     }
 }
 
-function duplicateSong() {
+async function duplicateSong() {
     const title = document.getElementById('song-title').value;
     const key = document.getElementById('song-key').value;
     const mode = document.getElementById('song-mode').value;
@@ -2757,11 +3621,47 @@ function duplicateSong() {
     // Combine key and mode for display (e.g., "C major" or "Am minor")
     const displayKey = mode === 'minor' ? key + 'm' : key;
     
-    const duplicatedSong = { id: Date.now(), title: title + ' (Copy)', key: displayKey, bpm, timeSig, lyrics };
-    songs.push(duplicatedSong);
-    localStorage.setItem('setlistManager_songs', JSON.stringify(songs));
-    renderSongsList();
-    alert('Song duplicated successfully!');
+    try {
+        if (!window.db) {
+            throw new Error('Database not initialized');
+        }
+        
+        // Get current user
+        const { data: { user }, error: userError } = await window.db.auth.getUser();
+        
+        if (userError || !user) {
+            // If user is not logged in, redirect to auth page
+            showAuthPage();
+            return;
+        }
+        
+        // Prepare duplicated song data
+        const duplicatedSongData = {
+            title: title + ' (Copy)',
+            key: displayKey,
+            bpm: bpm || 120,  // Default to 120 if not provided
+            lyrics,
+            user_id: user.id  // Include user_id as required
+        };
+        
+        // Insert duplicated song into Supabase
+        const { data, error } = await window.db
+            .from('songs')
+            .insert([duplicatedSongData]);
+        
+        if (error) {
+            console.error('Error duplicating song:', error);
+            alert('Error duplicating song: ' + error.message);
+            return;
+        }
+        
+        // Re-fetch songs from database to ensure latest data
+        await loadSongsFromDatabase();
+        alert('Song duplicated successfully!');
+    } catch (error) {
+        console.error('Error in duplicateSong:', error);
+        alert('Error duplicating song: ' + error.message);
+    }
 }
 
 /* ---------- metronome ---------- */
@@ -2933,22 +3833,280 @@ function createFallbackClick(beatTime, beatNumber) {
     oscillator.stop(beatTime + 0.05);
 }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(function(registration) {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      })
-      .catch(function(err) {
-        console.log('ServiceWorker registration failed: ', err);
-      });
+// Initialize Supabase client when the library is loaded
+function initSupabase() {
+  // Initialize Supabase client - REPLACE WITH YOUR SUPABASE PROJECT DETAILS
+  const supabaseUrl = 'https://xkrluahogjgnzusaqipl.supabase.co';
+  const supabaseKey = 'sb_publishable_XktEPytQmGvio4gDIv88pQ_tkBm7JbZ';
+  window.db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  // Auth functionality
+  const status = document.getElementById("status");
+  const userInfo = document.getElementById("user-info");
+  const userEmailSpan = document.getElementById("user-email");
+  const logoutBtn = document.getElementById("logout");
+  const loginForm = document.getElementById("login-form");
+
+  // Check initial auth state
+  window.db.auth.onAuthStateChange((event, session) => {
+    updateAuthUI(session?.user);
   });
+
+  // Initial check for current user
+  window.db.auth.getSession().then(({ data: { session } }) => {
+    updateAuthUI(session?.user);
+  });
+
+// Update UI based on auth state
+  function updateAuthUI(user) {
+    if (user) {
+      // User is logged in
+      document.getElementById("email").value = user.email || '';
+      document.getElementById("password").value = '';
+      
+      userEmailSpan.textContent = user.email;
+      userInfo.style.display = "block";
+      loginForm.style.display = "none";
+      logoutBtn.style.display = "block";
+      
+      // Show Add Song button
+      const addSongBtn = document.getElementById('add-song-btn');
+      if (addSongBtn) addSongBtn.style.display = "block";
+      
+      status.textContent = `✅ Logged in as ${user.email}`;
+      status.style.display = "block";
+    } else {
+      // User is not logged in
+      userInfo.style.display = "none";
+      loginForm.style.display = "block";
+      logoutBtn.style.display = "none";
+      
+      // Hide Add Song button
+      const addSongBtn = document.getElementById('add-song-btn');
+      if (addSongBtn) addSongBtn.style.display = "none";
+      
+      status.textContent = "Please log in";
+      status.style.display = "none";
+    }
+  }
+
+  // Auth logout button functionality
+  const authLogoutBtn = document.getElementById("auth-logout");
+  if (authLogoutBtn) {
+    authLogoutBtn.addEventListener("click", async () => {
+      if (window.db) {
+        await window.db.auth.signOut();
+      }
+      status.textContent = "👋 Logged out";
+      status.style.display = "block";
+      
+      // Update UI to show login form
+      userInfo.style.display = "none";
+      loginForm.style.display = "block";
+      logoutBtn.style.display = "none";
+      
+      // Clear inputs
+      document.getElementById("email").value = '';
+      document.getElementById("password").value = '';
+    });
+  }
+
+  // Sign up functionality
+  document.getElementById("signup").onclick = async () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+      status.textContent = "â?O Please enter both email and password";
+      status.style.display = "block";
+      return;
+    }
+
+    const { error } = await window.db.auth.signUp({
+      email,
+      password
+    });
+
+    status.textContent = error
+      ? "❌ " + error.message
+      : "✅ Signup successful (check email if required)";
+    status.style.display = "block";
+  };
+
+  // Login functionality
+  document.getElementById("login").onclick = async () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+      status.textContent = "â?O Please enter both email and password";
+      status.style.display = "block";
+      return;
+    }
+
+    const { data, error } = await window.db.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    status.textContent = error
+      ? "❌ " + error.message
+      : "✅ Logged in as " + data.user.email;
+    status.style.display = "block";
+  };
+
+  // Logout functionality
+  document.getElementById("logout").onclick = async () => {
+    await window.db.auth.signOut();
+    status.textContent = "👋 Logged out";
+    status.style.display = "block";
+  };
+
+  // Back button from auth page
+  document.getElementById("back-to-songs-from-auth").onclick = function() {
+    showSongsPage();
+  };
+
+  // Load both songs and setlists after initialization
+  setTimeout(async () => {
+    if (window.db) {
+      await loadSongsFromDatabase();
+      await loadSetlistsFromDatabase();
+      
+      // Also load user preferences if needed
+      loadUserPreferences();
+      
+      // Update action buttons after data is loaded
+      setTimeout(() => {
+        updateSongActionButtons();
+        updateSetlistActionButtons();
+      }, 500);
+    } else {
+      console.error('Supabase client not initialized');
+    }
+  }, 100);
 }
+
+  // Auth menu item functionality (for the three-dot menu Account option)
+    document.getElementById("auth-menu-item")?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      showAuthPage();
+    });
+
+  // Initialize Supabase when everything is loaded
+  if (window.supabase) {
+    initSupabase();
+  } else {
+    // If Supabase hasn't loaded yet, wait for it
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.supabase) {
+        initSupabase();
+      } else {
+        // Try again after a brief delay
+        setTimeout(function() {
+          if (window.supabase) {
+            initSupabase();
+          }
+        }, 1000);
+      }
+    });
+  }
+
+// Add click handlers for the account menu items
+// Using a more robust approach to ensure elements are available
+function attachAccountMenuHandlers() {
+  // Account menu item for songs page
+  const accountMenuItemSongs = document.getElementById('account-menu-item-songs');
+  if (accountMenuItemSongs) {
+    accountMenuItemSongs.removeEventListener('click', accountMenuItemSongs.clickHandler || null);
+    accountMenuItemSongs.clickHandler = function(e) {
+      e.stopPropagation();
+      // Close the menu
+      const dropdown = this.closest('.dropdown-menu');
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+      }
+      // Show auth page
+      if (typeof showAuthPage === 'function') {
+        showAuthPage();
+      }
+    };
+    accountMenuItemSongs.addEventListener('click', accountMenuItemSongs.clickHandler);
+    console.log('Attached click handler to songs account menu item');
+  } else {
+    console.log('Songs account menu item not found');
+  }
+  
+  // Account menu item for setlists page
+  const accountMenuItemSetlists = document.getElementById('account-menu-item-setlists');
+  if (accountMenuItemSetlists) {
+    accountMenuItemSetlists.removeEventListener('click', accountMenuItemSetlists.clickHandler || null);
+    accountMenuItemSetlists.clickHandler = function(e) {
+      e.stopPropagation();
+      // Close the menu
+      const dropdown = this.closest('.dropdown-menu');
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+      }
+      // Show auth page
+      if (typeof showAuthPage === 'function') {
+        showAuthPage();
+      }
+    };
+    accountMenuItemSetlists.addEventListener('click', accountMenuItemSetlists.clickHandler);
+    console.log('Attached click handler to setlists account menu item');
+  } else {
+    console.log('Setlists account menu item not found');
+  }
+}
+
+// Attach handlers when DOM is loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    attachAccountMenuHandlers();
+    // Ensure the handlers are also attached after a short delay in case of timing issues
+    setTimeout(attachAccountMenuHandlers, 100);
+  });
+} else {
+  // DOM is already loaded, try attaching immediately
+  attachAccountMenuHandlers();
+  // Ensure the handlers are also attached after a short delay in case of timing issues
+  setTimeout(attachAccountMenuHandlers, 100);
+}
+
+// As an additional fallback, use event delegation on the dropdown menus
+// This ensures clicks on account menu items are captured even if direct handlers fail
+document.addEventListener('click', function(e) {
+  if (e.target && (e.target.id === 'account-menu-item-songs' || e.target.id === 'account-menu-item-setlists')) {
+    e.stopPropagation();
+    // Close the menu
+    const dropdown = e.target.closest('.dropdown-menu');
+    if (dropdown) {
+      dropdown.classList.add('hidden');
+    }
+    // Show auth page
+    if (typeof showAuthPage === 'function') {
+      showAuthPage();
+    } else {
+      console.error('showAuthPage function not found');
+    }
+  }
+});
 </script>
 
 <script>
+// Force unregister old service workers to clear cache
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 // Register service worker if supported
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {

@@ -1,4 +1,4 @@
-# Setlist Manager for Pianists v1.1
+# Setlist Manager for Pianists v1.3
 
 A simple, standalone web application for musicians to manage their setlists, songs, and practice sessions.
 

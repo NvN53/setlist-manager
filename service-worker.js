@@ -1,4 +1,4 @@
-const CACHE_NAME = 'setlist-manager-v3';
+const CACHE_NAME = 'setlist-manager-v7';
 const urlsToCache = [
   './',
   './index.html',
