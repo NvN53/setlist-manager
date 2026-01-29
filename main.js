@@ -17,6 +17,41 @@ let analyser = null;
 let microphoneStream = null;
 let pitchDetectionActive = false;
 
+/* Show songs page */
+function showSongsPage() {
+    stopMetronome();
+    stopAutoscroll();
+    
+    // Hide all pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const viewSetlistPage = document.getElementById('view-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const settingsPage = document.getElementById('settings-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    const authPage = document.getElementById('auth-page');
+    
+    homeSongsPage?.classList.remove('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    
+    // Make sure auth page is hidden
+    authPage?.classList.add('hidden');
+    
+    // Update tabs to show songs as active
+    if (document.querySelector('.tab.active')) {
+        document.querySelector('.tab.active').classList.remove('active');
+    }
+    document.getElementById('songs-tab')?.classList.add('active');
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded, initializing application...');
@@ -32,10 +67,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadUserPreferences();
     
     // Initialize ambient pad
+    console.log('Initializing ambient pad...');
     initAmbientPad();
+    console.log('Ambient pad initialized');
     
     // Initialize event listeners
     initializeEventListeners();
+    
+    // Explicitly hide ambient modal on initial load
+    const ambientModal = document.getElementById('ambient-modal');
+    if (ambientModal) {
+        ambientModal.classList.add('hidden');
+        console.log('Added hidden class to ambient modal on startup');
+    } else {
+        console.warn('Ambient modal element not found!');
+    }
     
     // Show home page initially
     showSongsPage();
@@ -289,7 +335,10 @@ function initializeEventListeners() {
             
             // Get songs in the setlist
             const container = document.getElementById('setlist-songs-container');
-            const songIds = Array.from(container.children).map(child => parseInt(child.getAttribute('data-song-id')));
+            const songIds = container
+              ? Array.from(container.querySelectorAll('[data-song-id]'))
+                  .map(el => el.getAttribute('data-song-id'))
+              : [];
             
             // Prepare setlist data
             const setlistData = {
@@ -298,11 +347,25 @@ function initializeEventListeners() {
             };
             
             if (editingSetlistId) {
+                console.log('Attempting to save setlist with ID:', editingSetlistId, 'Type:', typeof editingSetlistId);
+                
+                // Ensure editingSetlistId is a string (UUID) and validate it
+                const stringEditingSetlistId = typeof editingSetlistId === 'string' ? editingSetlistId : String(editingSetlistId);
+                
+                const validatedSetlistId = validateAndFormatId(stringEditingSetlistId, 'editing setlist ID');
+                if (!validatedSetlistId) {
+                    console.error('Failed to validate setlist ID for saving:', editingSetlistId);
+                    alert('Invalid setlist ID format');
+                    return;
+                }
+                
+                const finalEditingSetlistId = validatedSetlistId;
+                
                 // Update existing setlist
                 const { error } = await window.db
                     .from('setlists')
                     .update(setlistData)
-                    .eq('id', editingSetlistId);
+                    .eq('id', finalEditingSetlistId);
                 
                 if (error) {
                     console.error('Error updating setlist:', error);
@@ -314,12 +377,12 @@ function initializeEventListeners() {
                 await window.db
                     .from('setlist_songs')
                     .delete()
-                    .eq('setlist_id', editingSetlistId);
+                    .eq('setlist_id', finalEditingSetlistId);
                 
                 // Add updated setlist songs
                 if (songIds.length > 0) {
                     const setlistSongsData = songIds.map((songId, index) => ({
-                        setlist_id: editingSetlistId,
+                        setlist_id: finalEditingSetlistId,
                         song_id: songId,
                         position: index
                     }));
@@ -330,7 +393,7 @@ function initializeEventListeners() {
                 }
                 
                 // Update in local setlists array
-                const index = setlists.findIndex(s => s.id === editingSetlistId);
+                const index = setlists.findIndex(s => s.id === finalEditingSetlistId);
                 if (index !== -1) {
                     setlists[index] = { ...setlists[index], title, songIds };
                 }
@@ -371,7 +434,18 @@ function initializeEventListeners() {
             if (cameFromViewSetlist) {
                 // If we came from view setlist, go back there
                 if (editingSetlistId) {
-                    const setlist = setlists.find(s => s.id === editingSetlistId);
+                    // Ensure editingSetlistId is a string (UUID) and validate it
+                    const stringEditingSetlistId = typeof editingSetlistId === 'string' ? editingSetlistId : String(editingSetlistId);
+                    
+                    const validatedSetlistId = validateAndFormatId(stringEditingSetlistId, 'editing setlist ID');
+                    if (!validatedSetlistId) {
+                        alert('Invalid setlist ID format');
+                        return;
+                    }
+                    
+                    const finalEditingSetlistId = validatedSetlistId;
+                    
+                    const setlist = setlists.find(s => s.id === finalEditingSetlistId);
                     if (setlist) {
                         showViewSetlistPage(setlist);
                         return;
@@ -387,7 +461,21 @@ function initializeEventListeners() {
     
     // Delete setlist button
     document.getElementById('delete-setlist-btn')?.addEventListener('click', async function() {
-        if (editingSetlistId && confirm('Are you sure you want to delete this setlist?')) {
+        console.log('Attempting to delete setlist with ID:', editingSetlistId, 'Type:', typeof editingSetlistId);
+        
+        // Ensure editingSetlistId is a string (UUID) and validate it
+        const stringEditingSetlistId = typeof editingSetlistId === 'string' ? editingSetlistId : String(editingSetlistId);
+        
+        const validatedSetlistId = validateAndFormatId(stringEditingSetlistId, 'editing setlist ID');
+        if (!validatedSetlistId) {
+            console.error('Failed to validate setlist ID for deletion:', editingSetlistId);
+            alert('Invalid setlist ID format');
+            return;
+        }
+        
+        const finalEditingSetlistId = validatedSetlistId;
+        
+        if (stringEditingSetlistId && confirm('Are you sure you want to delete this setlist?')) {
             try {
                 if (!window.db) {
                     throw new Error('Database not initialized');
@@ -402,11 +490,13 @@ function initializeEventListeners() {
                     return;
                 }
                 
+
+                
                 // Delete from Supabase database
                 const { error } = await window.db
                     .from('setlists')
                     .delete()
-                    .match({ id: editingSetlistId, user_id: user.id }); // Ensure user owns the setlist
+                    .match({ id: finalEditingSetlistId, user_id: user.id }); // Ensure user owns the setlist
                 
                 if (error) {
                     console.error('Error deleting setlist:', error);
@@ -418,7 +508,7 @@ function initializeEventListeners() {
                 await window.db
                     .from('setlist_songs')
                     .delete()
-                    .eq('setlist_id', editingSetlistId);
+                    .eq('setlist_id', finalEditingSetlistId);
                 
                 // Re-fetch setlists from database to ensure latest data
                 await loadSetlistsFromDatabase();
@@ -496,23 +586,55 @@ function initializeEventListeners() {
     });
     
     // Ambient toggle
-    document.getElementById('ambient-toggle')?.addEventListener('click', function() {
-        if (ambientActive) {
-            stopAmbientPad();
-        } else {
-            startAmbientPad();
+    try {
+        const ambientToggle = document.getElementById('ambient-toggle');
+        if (ambientToggle) {
+            ambientToggle.addEventListener('click', function() {
+                console.log('Ambient toggle clicked, current state:', ambientActive ? 'ON' : 'OFF');
+                if (ambientActive) {
+                    stopAmbientPad();
+                } else {
+                    startAmbientPad();
+                }
+            });
         }
-    });
+    } catch (error) {
+        console.error('Error attaching ambient toggle listener:', error);
+    }
     
     // Ambient dropdown
-    document.getElementById('ambient-dropdown')?.addEventListener('click', function() {
-        document.getElementById('ambient-modal').classList.remove('hidden');
-    });
+    try {
+        const ambientDropdown = document.getElementById('ambient-dropdown');
+        if (ambientDropdown) {
+            ambientDropdown.addEventListener('click', function() {
+                console.log('Ambient dropdown clicked');
+                const ambientModal = document.getElementById('ambient-modal');
+                if (ambientModal) {
+                    ambientModal.classList.remove('hidden');
+                    console.log('Ambient modal shown');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error attaching ambient dropdown listener:', error);
+    }
     
     // Close ambient modal
-    document.getElementById('close-ambient-modal')?.addEventListener('click', function() {
-        document.getElementById('ambient-modal').classList.add('hidden');
-    });
+    try {
+        const closeAmbientModal = document.getElementById('close-ambient-modal');
+        if (closeAmbientModal) {
+            closeAmbientModal.addEventListener('click', function() {
+                console.log('Close ambient modal clicked');
+                const ambientModal = document.getElementById('ambient-modal');
+                if (ambientModal) {
+                    ambientModal.classList.add('hidden');
+                    console.log('Ambient modal hidden');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error attaching close ambient modal listener:', error);
+    }
     
     // Settings page back button
     document.getElementById('back-to-home-from-settings')?.addEventListener('click', function() {
@@ -609,20 +731,64 @@ async function loadUserPreferences() {
 
 // Show settings page
 function showSettingsPage() {
-    // Hide all other pages
-    document.getElementById('home-songs-page').classList.add('hidden');
-    document.getElementById('home-setlists-page').classList.add('hidden');
-    document.getElementById('edit-song-page').classList.add('hidden');
-    document.getElementById('edit-setlist-page').classList.add('hidden');
-    document.getElementById('view-setlist-page').classList.add('hidden');
-    document.getElementById('lyrics-page').classList.add('hidden');
-    document.getElementById('ambient-modal').classList.add('hidden');
+    // Hide all other pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const viewSetlistPage = document.getElementById('view-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    const settingsPage = document.getElementById('settings-page');
+    
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
     
     // Show settings page
-    document.getElementById('settings-page').classList.remove('hidden');
+    settingsPage?.classList.remove('hidden');
 }
 
-// Show lyrics page from setlist
+/* Show setlists page */
+function showSetlistsPage() {
+    stopMetronome();
+    stopAutoscroll();
+    
+    // Hide all pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const viewSetlistPage = document.getElementById('view-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const settingsPage = document.getElementById('settings-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    const authPage = document.getElementById('auth-page');
+    
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.remove('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    
+    // Make sure auth page is hidden
+    authPage?.classList.add('hidden');
+    
+    // Update tabs to show setlists as active
+    if (document.querySelector('.tab.active')) {
+        document.querySelector('.tab.active').classList.remove('active');
+    }
+    document.getElementById('setlists-tab-active')?.classList.add('active');
+}
+
+/* Show lyrics page from setlist */
 function showLyricsPageFromSetlist(song, songIds, currentIndex) {
     currentSong = song;
     currentSetlistSongIds = songIds;
@@ -645,20 +811,35 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
 function showLyricsPage(song) {
     stopMetronome();
     stopAutoscroll();
-    document.getElementById('home-songs-page').classList.add('hidden');
-    document.getElementById('home-setlists-page').classList.add('hidden');
-    document.getElementById('edit-song-page').classList.add('hidden');
-    document.getElementById('edit-setlist-page').classList.add('hidden');
-    document.getElementById('view-setlist-page').classList.add('hidden');
-    document.getElementById('lyrics-page').classList.remove('hidden');
-    document.getElementById('settings-page').classList.add('hidden');
-    document.getElementById('ambient-modal').classList.add('hidden');
+    
+    // Hide all pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const viewSetlistPage = document.getElementById('view-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const settingsPage = document.getElementById('settings-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    const authPage = document.getElementById('auth-page');
+    
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.remove('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    
     // Make sure auth page is hidden
-    document.getElementById('auth-page')?.classList.add('hidden');
+    authPage?.classList.add('hidden');
     
     // Update lyrics page content
-    document.getElementById('lyrics-title').textContent = song.title;
-    document.getElementById('lyrics-details').textContent = `${song.key} • ${song.bpm} bpm`;
+    const lyricsTitle = document.getElementById('lyrics-title');
+    const lyricsDetails = document.getElementById('lyrics-details');
+    lyricsTitle?.textContent = song.title;
+    lyricsDetails?.textContent = `${song.key} • ${song.bpm} bpm`;
     renderLyrics(song);
     
     // Update lyrics menu
@@ -832,9 +1013,13 @@ function stopAutoscroll() {
 
 // Initialize ambient pad
 function initAmbientPad() {
+    console.log('Initializing ambient pad UI...');
     // Create pitch buttons
     const pitchButtonsContainer = document.getElementById('pitch-buttons');
-    if (!pitchButtonsContainer) return;
+    if (!pitchButtonsContainer) {
+        console.error('Pitch buttons container not found!');
+        return;
+    }
     
     const pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     pitchButtonsContainer.innerHTML = '';
@@ -845,6 +1030,7 @@ function initAmbientPad() {
         button.textContent = pitch;
         button.dataset.pitch = pitch;
         button.addEventListener('click', function() {
+            console.log('Pitch button clicked:', pitch);
             // Remove active class from all buttons
             document.querySelectorAll('#pitch-buttons .pitch-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -885,6 +1071,7 @@ function initAmbientPad() {
     
     // Tap to hum button
     document.getElementById('tap-to-hum')?.addEventListener('click', async function() {
+        console.log('Tap to hum button clicked');
         await startPitchDetection();
     });
     
@@ -892,6 +1079,7 @@ function initAmbientPad() {
     document.getElementById('use-detected-pitch')?.addEventListener('click', function() {
         const detectedPitch = document.getElementById('detected-pitch-value').textContent;
         if (detectedPitch && detectedPitch !== '-') {
+            console.log('Using detected pitch:', detectedPitch);
             // Find the pitch button and activate it
             const pitchBtn = document.querySelector(`.pitch-btn[data-pitch="${detectedPitch}"]`);
             if (pitchBtn) {
@@ -899,6 +1087,7 @@ function initAmbientPad() {
             }
         }
     });
+    console.log('Ambient pad UI initialized');
 }
 
 // Update pad status
@@ -925,6 +1114,7 @@ function updateAmbientToggleState() {
 
 // Start ambient pad
 function startAmbientPad() {
+    console.log('Starting ambient pad with pitch:', currentPitch);
     if (!currentPitch) {
         alert('Please select a pitch first');
         return;
@@ -964,10 +1154,12 @@ function startAmbientPad() {
     ambientActive = true;
     updatePadStatus(`${currentPitch} - Active`);
     updateAmbientToggleState();
+    console.log('Ambient pad started successfully');
 }
 
 // Stop ambient pad
 function stopAmbientPad() {
+    console.log('Stopping ambient pad');
     // Stop all oscillators
     oscillators.forEach(osc => {
         try {
@@ -983,6 +1175,7 @@ function stopAmbientPad() {
     ambientActive = false;
     updatePadStatus(`${currentPitch || 'None'} - Inactive`);
     updateAmbientToggleState();
+    console.log('Ambient pad stopped');
 }
 
 // Start pitch detection

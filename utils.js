@@ -9,7 +9,41 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return text.replace(/[&<>'"]/g, m => map[m]);
+}
+
+// Helper function to validate UUID format
+function isValidUUID(uuid) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid);
+}
+
+// Validate and ensure ID is a proper UUID string
+function validateAndFormatId(id, context = 'ID') {
+  console.log(`Validating ${context}:`, id, 'Type:', typeof id);
+  
+  // Handle null/undefined explicitly
+  if (id === null || id === undefined) {
+    console.error(`Invalid ${context} - null or undefined:`, id);
+    return null;
+  }
+  
+  const stringId = typeof id === 'string' ? id : String(id);
+  
+  // Validate that the ID looks like a UUID
+  if (!stringId || typeof stringId !== 'string' || stringId.length < 10) {
+    console.error(`Invalid ${context} - not a valid string:`, id, 'Converted to string:', stringId);
+    return null;
+  }
+  
+  // Check if it's a UUID-like string
+  const isUUID = isValidUUID(stringId);
+  if (!isUUID && !isNaN(Number(stringId))) {
+    console.error(`Invalid ${context} - appears to be numeric:`, stringId, 'Number value:', Number(stringId));
+    return null;
+  }
+  
+  console.log(`${context} validation passed:`, stringId);
+  return stringId;
 }
 
 // Chord detection

@@ -8,6 +8,7 @@ let editingSongId = null; // ID of song being edited
 // Load songs from Supabase database
 async function loadSongsFromDatabase() {
     console.log('Loading songs from database...');
+    console.log('Initial songs array length:', songs.length);
     try {
         if (window.db) {
             // Fetch all songs from the database
@@ -77,7 +78,7 @@ function renderSongsList(filteredSongs = null) {
             item.addEventListener('click', function() {
                 // Get the song ID from the data attribute
                 const dataId = item.getAttribute('data-id');
-                const songId = dataId ? parseInt(dataId) : null;
+                const songId = dataId || null;
                 // Find the corresponding song in the songs array
                 const song = songs.find(s => s.id === songId);
                 // If song exists, show the lyrics page
@@ -104,7 +105,7 @@ async function updateSongActionButtons() {
   const songItems = document.querySelectorAll('.song-item');
   
   for (const item of songItems) {
-    const songId = parseInt(item.getAttribute('data-id'));
+    const songId = item.getAttribute('data-id');
     const songUserId = item.getAttribute('data-user-id');
     
     let isOwner = false;
@@ -167,19 +168,39 @@ async function updateSongActionButtons() {
 function showEditSongPage(song = null) {
     stopMetronome();
     stopAutoscroll();
-    document.getElementById('home-songs-page').classList.add('hidden');
-    document.getElementById('home-setlists-page').classList.add('hidden');
-    document.getElementById('edit-song-page').classList.remove('hidden');
-    document.getElementById('edit-setlist-page').classList.add('hidden');
-    document.getElementById('lyrics-page').classList.add('hidden');
-    document.getElementById('settings-page').classList.add('hidden');
-    document.getElementById('ambient-modal').classList.add('hidden');
+    
+    // Hide all pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const settingsPage = document.getElementById('settings-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    const authPage = document.getElementById('auth-page');
+    
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.remove('hidden');
+    editSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    
     // Make sure auth page is hidden
-    document.getElementById('auth-page')?.classList.add('hidden');
+    authPage?.classList.add('hidden');
     
     if (song) {
         editingSongId = song.id;
-        document.getElementById('song-title').value = song.title;
+        const songTitleInput = document.getElementById('song-title');
+        const songKeyInput = document.getElementById('song-key');
+        const songModeInput = document.getElementById('song-mode');
+        const songBpmInput = document.getElementById('song-bpm');
+        const songTimeSigInput = document.getElementById('song-time-sig');
+        const songLyricsInput = document.getElementById('song-lyrics');
+        const deleteBtn = document.getElementById('delete-song-btn');
+        
+        songTitleInput?.value = song.title;
         
         // Parse key to separate key and mode
         let key = song.key;
@@ -189,24 +210,32 @@ function showEditSongPage(song = null) {
             mode = 'minor';
         }
         
-        document.getElementById('song-key').value = key;
-        document.getElementById('song-mode').value = mode;
-        document.getElementById('song-bpm').value = song.bpm || 120;  // Default to 120 if not provided
-        document.getElementById('song-time-sig').value = song.timeSig || '4/4';  // Default to 4/4 if not provided
-        document.getElementById('song-lyrics').value = song.lyrics || '';
+        songKeyInput?.value = key;
+        songModeInput?.value = mode;
+        songBpmInput?.value = song.bpm || 120;  // Default to 120 if not provided
+        songTimeSigInput?.value = song.timeSig || '4/4';  // Default to 4/4 if not provided
+        songLyricsInput?.value = song.lyrics || '';
         
         // Show delete button
-        document.getElementById('delete-song-btn').style.display = 'block';
+        if (deleteBtn) deleteBtn.style.display = 'block';
     } else {
         // New song
         editingSongId = null;
-        document.getElementById('song-title').value = '';
-        document.getElementById('song-key').value = 'C';
-        document.getElementById('song-mode').value = 'major';
-        document.getElementById('song-bpm').value = 120;  // Default for new songs
-        document.getElementById('song-time-sig').value = '4/4';
-        document.getElementById('song-lyrics').value = '';
-        document.getElementById('delete-song-btn').style.display = 'none';
+        const songTitleInput = document.getElementById('song-title');
+        const songKeyInput = document.getElementById('song-key');
+        const songModeInput = document.getElementById('song-mode');
+        const songBpmInput = document.getElementById('song-bpm');
+        const songTimeSigInput = document.getElementById('song-time-sig');
+        const songLyricsInput = document.getElementById('song-lyrics');
+        const deleteBtn = document.getElementById('delete-song-btn');
+        
+        songTitleInput?.value = '';
+        songKeyInput?.value = 'C';
+        songModeInput?.value = 'major';
+        songBpmInput?.value = 120;  // Default for new songs
+        songTimeSigInput?.value = '4/4';
+        songLyricsInput?.value = '';
+        if (deleteBtn) deleteBtn.style.display = 'none';
     }
 }
 

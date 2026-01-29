@@ -9,6 +9,7 @@ let cameFromViewSetlist = false; // Track if we came from view setlist page
 // Load setlists from Supabase database
 async function loadSetlistsFromDatabase() {
     console.log('Loading setlists from database...');
+    console.log('Songs array length when loading setlists:', songs.length);
     try {
         if (window.db) {
             // Fetch all setlists from the database
@@ -23,30 +24,54 @@ async function loadSetlistsFromDatabase() {
                 setlists = [];
             } else {
                 console.log('Fetched setlists data:', data);
-                // Map Supabase data to local format
-                setlists = data.map(setlist => ({
+                // Map Supabase data to local format, filtering out invalid IDs
+                setlists = data.filter(setlist => {
+                    const isValid = validateAndFormatId(setlist.id, `loaded setlist ID ${setlist.id}`);
+                    if (!isValid) {
+                        console.warn('Skipping setlist with invalid ID:', setlist);
+                    }
+                    return isValid;
+                }).map(setlist => ({
                     id: setlist.id,
                     title: setlist.title,
-                    user_id: setlist.user_id  // Include user_id for ownership checks
+                    user_id: setlist.user_id,  // Include user_id for ownership checks
+                    songIds: []  // Initialize with empty array, will be populated below
                 }));
                 
                 // Now fetch the songs for each setlist
-                for (let i = 0; i < setlists.length; i++) {
-                    const setlistId = setlists[i].id;
-                    const { data: setlistSongsData, error: setlistSongsError } = await window.db
-                        .from('setlist_songs')
-                        .select('song_id, position')
-                        .eq('setlist_id', setlistId)
-                        .order('position', { ascending: true });
+                // Process in batches to avoid too many concurrent requests
+                const batchSize = 5;
+                for (let batchStart = 0; batchStart < setlists.length; batchStart += batchSize) {
+                    const batch = setlists.slice(batchStart, batchStart + batchSize);
                     
-                    if (setlistSongsError) {
-                        console.error('Error fetching setlist songs:', setlistSongsError);
-                        setlists[i].songIds = [];
-                    } else {
-                        setlists[i].songIds = setlistSongsData.map(ss => ss.song_id);
+                    for (let i = 0; i < batch.length; i++) {
+                        const setlistIndex = batchStart + i;
+                        const setlistId = setlists[setlistIndex].id;
+                        
+                        // Validate the setlist ID before using it in a query
+                        const validatedSetlistId = validateAndFormatId(setlistId, `setlist ID at index ${setlistIndex}`);
+                        if (!validatedSetlistId) {
+                            console.warn(`Skipping setlist with invalid ID at index ${setlistIndex}:`, setlistId);
+                            setlists[setlistIndex].songIds = [];
+                            continue;
+                        }
+                        
+                        const { data: setlistSongsData, error: setlistSongsError } = await window.db
+                            .from('setlist_songs')
+                            .select('song_id, position')
+                            .eq('setlist_id', validatedSetlistId)
+                            .order('position', { ascending: true });
+                        
+                        if (setlistSongsError) {
+                            console.error('Error fetching setlist songs for setlist', setlistId, ':', setlistSongsError);
+                            setlists[setlistIndex].songIds = [];
+                        } else {
+                            setlists[setlistIndex].songIds = setlistSongsData.map(ss => ss.song_id);
+                        }
                     }
                 }
-                console.log('Loaded setlists:', setlists);
+                
+                console.log('Loaded setlists with song IDs:', setlists);
             }
         } else {
             // If no db available, set to empty array
@@ -65,7 +90,14 @@ async function loadSetlistsFromDatabase() {
 // Render the list of setlists
 function renderSetlistsList(filteredSetlists = null) {
     const setlistsList = document.getElementById('setlists-list');
+    if (!setlistsList) {
+        console.error('Setlists list container not found');
+        return;
+    }
+    
     const setlistsToRender = filteredSetlists || setlists;
+    console.log('Rendering setlists list with', setlistsToRender.length, 'setlists');
+    
     setlistsList.innerHTML = setlistsToRender.map(setlist => {
         // Calculate actual song count
         const songCount = setlist.songIds ? setlist.songIds.length : 0;
@@ -81,28 +113,19 @@ function renderSetlistsList(filteredSetlists = null) {
         </div>`;
     }).join('');
     
-    // Add event listeners for setlist items
-    const setlistItems = document.querySelectorAll('.setlist-item');
-    setlistItems.forEach(item => {
-        const setlistId = parseInt(item.getAttribute('data-id'));
+    // Add event listeners for setlist items using proper event delegation
+    const setlistsContainer = document.getElementById('setlists-list');
+    if (setlistsContainer) {
+        // Update action buttons first to ensure buttons exist
+        updateSetlistActionButtons();
         
-        // Add click handler for viewing setlist
-        item.onclick = async (e) => {
-            // Check if the click was on an action button
-            if (e.target.classList.contains('duplicate-setlist-btn')) {
-                await duplicateSetlist(setlistId);
-                return;
-            } else if (e.target.classList.contains('edit-setlist-btn')) {
-                const setlist = setlists.find(s => s.id === setlistId);
-                if (setlist) showEditSetlistPage(setlist);
-                return;
-            }
-            
-            // Otherwise, show the setlist
-            const setlist = setlists.find(s => s.id === setlistId);
-            if (setlist) showViewSetlistPage(setlist);
-        };
-    });
+        // Add click handler using event delegation
+        // Use a fresh listener each time to avoid conflicts
+        setlistsContainer.removeEventListener('click', handleSetlistItemClick);
+        setlistsContainer.addEventListener('click', handleSetlistItemClick);
+        
+        console.log('Event listener attached to setlists container');
+    }
     
     // Update action buttons after a short delay to allow DOM to render
     setTimeout(updateSetlistActionButtons, 100);
@@ -113,7 +136,17 @@ async function updateSetlistActionButtons() {
   const setlistItems = document.querySelectorAll('.setlist-item');
   
   for (const item of setlistItems) {
-    const setlistId = parseInt(item.getAttribute('data-id'));
+    const setlistId = item.getAttribute('data-id');
+    
+    // Validate the setlist ID before processing
+    const validatedSetlistId = validateAndFormatId(setlistId, 'setlist ID in updateSetlistActionButtons');
+    if (!validatedSetlistId) {
+      console.warn('Skipping setlist item with invalid ID:', setlistId);
+      // Hide the item or mark it as invalid
+      item.style.display = 'none';
+      continue;
+    }
+    
     const setlistUserId = item.getAttribute('data-user-id');
     
     let isOwner = false;
@@ -158,7 +191,7 @@ async function updateSetlistActionButtons() {
       const duplicateBtn = document.createElement('button');
       duplicateBtn.className = 'btn btn-sm btn-secondary duplicate-setlist-btn';
       duplicateBtn.textContent = 'Duplicate';
-      duplicateBtn.dataset.setlistId = setlistId;
+      duplicateBtn.dataset.setlistId = validatedSetlistId; // Use validated ID
       actionsContainer.appendChild(duplicateBtn);
     }
     
@@ -166,29 +199,108 @@ async function updateSetlistActionButtons() {
       const editBtn = document.createElement('button');
       editBtn.className = 'btn btn-sm btn-warning edit-setlist-btn';
       editBtn.textContent = 'Edit';
-      editBtn.dataset.setlistId = setlistId;
+      editBtn.dataset.setlistId = validatedSetlistId; // Use validated ID
       actionsContainer.appendChild(editBtn);
     }
   }
 }
 
+// Event handler for setlist item clicks
+async function handleSetlistItemClick(e) {
+  console.log('Setlist item clicked:', e.target);
+  
+  const item = e.target.closest('.setlist-item');
+  if (!item) return;
+  
+  const setlistId = item.getAttribute('data-id');
+  console.log('Clicked setlist ID:', setlistId);
+  
+  // Check if the click was on an action button
+  if (e.target.classList.contains('duplicate-setlist-btn')) {
+    // Get ID from the button's dataset first, fall back to item's data-id
+    const buttonSetlistId = e.target.dataset.setlistId;
+    const actualSetlistId = buttonSetlistId || setlistId;
+    
+    // Validate before attempting to duplicate
+    const validatedSetlistId = validateAndFormatId(actualSetlistId, 'setlist ID in duplicate handler');
+    if (!validatedSetlistId) {
+      console.error('Invalid setlist ID found in duplicate handler:', actualSetlistId);
+      alert('This setlist has an invalid ID and cannot be duplicated');
+      return;
+    }
+    
+    await duplicateSetlist(validatedSetlistId);
+    return;
+  } else if (e.target.classList.contains('edit-setlist-btn')) {
+    // Get ID from the button's dataset first, fall back to item's data-id
+    const buttonSetlistId = e.target.dataset.setlistId;
+    const actualSetlistId = buttonSetlistId || setlistId;
+    const setlist = setlists.find(s => s.id === actualSetlistId);
+    if (setlist) {
+      // Validate the setlist ID before editing
+      const validatedSetlistId = validateAndFormatId(setlist.id, 'setlist ID in edit handler');
+      if (!validatedSetlistId) {
+        console.error('Invalid setlist ID found in edit handler:', setlist.id);
+        alert('This setlist has an invalid ID and cannot be edited');
+        return;
+      }
+      console.log('Showing edit setlist page for:', setlist.title);
+      showEditSetlistPage(setlist);
+    }
+    return;
+  }
+  
+  // Otherwise, show the setlist
+  const setlist = setlists.find(s => s.id === setlistId);
+  if (setlist) {
+    console.log('Opening setlist:', setlist.title);
+    
+    // Double-check that the setlist ID is valid before showing it
+    const validatedSetlistId = validateAndFormatId(setlist.id, 'setlist ID in showViewSetlistPage');
+    if (!validatedSetlistId) {
+      console.error('Invalid setlist ID found in setlists array:', setlist.id);
+      alert('This setlist has an invalid ID and cannot be opened');
+      return;
+    }
+    
+    showViewSetlistPage(setlist);
+  } else {
+    console.error('Setlist not found:', setlistId);
+  }
+}
+
 // Show view setlist page
 function showViewSetlistPage(setlist) {
+    console.log('showViewSetlistPage called with:', setlist);
     stopMetronome();
     stopAutoscroll();
-    document.getElementById('home-songs-page').classList.add('hidden');
-    document.getElementById('home-setlists-page').classList.add('hidden');
-    document.getElementById('edit-song-page').classList.add('hidden');
-    document.getElementById('edit-setlist-page').classList.add('hidden');
-    document.getElementById('view-setlist-page').classList.remove('hidden');
-    document.getElementById('lyrics-page').classList.add('hidden');
-    document.getElementById('settings-page').classList.add('hidden');
-    document.getElementById('ambient-modal').classList.add('hidden');
+    
+    // Hide all pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const viewSetlistPage = document.getElementById('view-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const settingsPage = document.getElementById('settings-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    const authPage = document.getElementById('auth-page');
+    
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.remove('hidden');
+    lyricsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
+    
     // Make sure auth page is hidden
-    document.getElementById('auth-page')?.classList.add('hidden');
+    authPage?.classList.add('hidden');
     
     currentSetlist = setlist;
-    document.getElementById('view-setlist-title').textContent = setlist.title;
+    const viewSetTitle = document.getElementById('view-setlist-title');
+    viewSetTitle?.textContent = setlist.title;
     renderViewSetlistSongs(setlist.songIds);
 }
 
@@ -222,14 +334,24 @@ function renderViewSetlistSongs(songIds) {
 
 // Show edit setlist page
 function showEditSetlistPage(setlist = null, fromViewSetlist = false) {
-  document.getElementById('home-songs-page').classList.add('hidden');
-  document.getElementById('home-setlists-page').classList.add('hidden');
-  document.getElementById('edit-song-page').classList.add('hidden');
-  document.getElementById('edit-setlist-page').classList.remove('hidden');
-  document.getElementById('view-setlist-page').classList.add('hidden');
-  document.getElementById('lyrics-page').classList.add('hidden');
-  document.getElementById('settings-page').classList.add('hidden');
-  document.getElementById('ambient-modal').classList.add('hidden');
+  // Hide all pages with defensive null checks
+  const homeSongsPage = document.getElementById('home-songs-page');
+  const homeSetlistsPage = document.getElementById('home-setlists-page');
+  const editSongPage = document.getElementById('edit-song-page');
+  const editSetlistPage = document.getElementById('edit-setlist-page');
+  const viewSetlistPage = document.getElementById('view-setlist-page');
+  const lyricsPage = document.getElementById('lyrics-page');
+  const settingsPage = document.getElementById('settings-page');
+  const ambientModal = document.getElementById('ambient-modal');
+  
+  homeSongsPage?.classList.add('hidden');
+  homeSetlistsPage?.classList.add('hidden');
+  editSongPage?.classList.add('hidden');
+  editSetlistPage?.classList.remove('hidden');
+  viewSetlistPage?.classList.add('hidden');
+  lyricsPage?.classList.add('hidden');
+  settingsPage?.classList.add('hidden');
+  ambientModal?.classList.add('hidden');
   cameFromViewSetlist = fromViewSetlist;
 
   // clear search box for available songs
@@ -238,30 +360,42 @@ function showEditSetlistPage(setlist = null, fromViewSetlist = false) {
 
   if (setlist) {
     // Editing existing setlist
-    document.getElementById('edit-setlist-title').textContent = 'Edit Setlist';
-    document.getElementById('setlist-title').value = setlist.title;
+    const editSetTitle = document.getElementById('edit-setlist-title');
+    const setlistTitleInput = document.getElementById('setlist-title');
+    const deleteBtn = document.getElementById('delete-setlist-btn');
+    
+    editSetTitle?.textContent = 'Edit Setlist';
+    setlistTitleInput?.value = setlist.title;
     editingSetlistId = setlist.id;
 
     // Render songs in setlist
     renderSetlistSongs(setlist.songIds);
 
     // Show delete button
-    document.getElementById('delete-setlist-btn').style.display = 'block';
+    if (deleteBtn) deleteBtn.style.display = 'block';
   } else {
     // Creating new setlist
-    document.getElementById('edit-setlist-title').textContent = 'New Setlist';
-    document.getElementById('setlist-title').value = '';
+    const editSetTitle = document.getElementById('edit-setlist-title');
+    const setlistTitleInput = document.getElementById('setlist-title');
+    const container = document.getElementById('setlist-songs-container');
+    const deleteBtn = document.getElementById('delete-setlist-btn');
+    
+    editSetTitle?.textContent = 'New Setlist';
+    setlistTitleInput?.value = '';
     editingSetlistId = null;
 
     // Clear songs in setlist
-    document.getElementById('setlist-songs-container').innerHTML = '';
+    if (container) container.innerHTML = '';
 
     // Hide delete button
-    document.getElementById('delete-setlist-btn').style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
   }
 
   // Render available songs and wire search
-  renderAvailableSongs();
+  setTimeout(() => {
+    renderAvailableSongs();
+    console.log('Available songs rendered, songs array length:', songs.length);
+  }, 100);
 }
 
 // Render songs currently in the setlist editor
@@ -297,7 +431,7 @@ function renderSetlistSongs(songIds) {
       el.remove();
       
       // Update the setlist data in localStorage
-      const newSongIds = Array.from(container.children).map(ch => parseInt(ch.getAttribute('data-song-id')));
+      const newSongIds = Array.from(container.children).map(ch => ch.getAttribute('data-song-id'));
       
       // Update the setlist in the global setlists array
       if (editingSetlistId) {
@@ -323,7 +457,7 @@ function renderSetlistSongs(songIds) {
       el.classList.remove('dragging');
       
       // Update the setlist data after reordering
-      const newSongIds = Array.from(container.children).map(ch => parseInt(ch.getAttribute('data-song-id')));
+      const newSongIds = Array.from(container.children).map(ch => ch.getAttribute('data-song-id'));
       
       // Update the setlist in the global setlists array
       if (editingSetlistId) {
@@ -369,7 +503,15 @@ function getDragAfterElement(container, y) {
 
 // Render available songs to add to the setlist
 function renderAvailableSongs() {
+  console.log('renderAvailableSongs called');
+  console.log('Songs array length:', songs.length);
+  console.log('Editing setlist ID:', editingSetlistId);
+  
   const container = document.getElementById('available-songs-list');
+  if (!container) {
+    console.error('Available songs container not found');
+    return;
+  }
   
   // Get the current setlist songs to exclude them from the available list
   let currentSetlistSongIds = [];
@@ -405,7 +547,10 @@ function renderAvailableSongs() {
     `;
     
     // Add click handler to add the song to the setlist
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent event bubbling
+      console.log('Adding song to setlist:', song.id, song.title);
+      console.log('Editing setlist ID when adding song:', editingSetlistId);
       addSongToSetlist(song.id);
     });
     
@@ -415,7 +560,15 @@ function renderAvailableSongs() {
 
 // Add a song to the current setlist
 function addSongToSetlist(songId) {
+  console.log('addSongToSetlist called with:', songId);
+  console.log('Global songs array length:', songs.length);
+  console.log('Editing setlist ID:', editingSetlistId);
+  
   const container = document.getElementById('setlist-songs-container');
+  if (!container) {
+    console.error('Setlist songs container not found');
+    return;
+  }
   
   // Check if the song is already in the setlist
   const existingSong = container.querySelector(`[data-song-id="${songId}"]`);
@@ -455,15 +608,32 @@ function addSongToSetlist(songId) {
     el.remove();
     
     // Update the setlist data in localStorage
-    const newSongIds = Array.from(container.children).map(ch => parseInt(ch.getAttribute('data-song-id')));
+    const newSongIds = Array.from(container.children).map(ch => ch.getAttribute('data-song-id'));
+    
+    // Validate song IDs before updating
+    const validatedSongIds = newSongIds.filter(id => {
+      if (!id) return false; // Skip null/undefined IDs
+      const validated = validateAndFormatId(id, 'song ID in remove handler');
+      return validated !== null;
+    });
     
     // Update the setlist in the global setlists array
     if (editingSetlistId) {
-      const index = setlists.findIndex(s => s.id === editingSetlistId);
-      if (index !== -1) {
-        setlists[index].songIds = newSongIds;
-        // Save to localStorage
-        localStorage.setItem('setlistManager_setlists', JSON.stringify(setlists));
+      const validatedSetlistId = validateAndFormatId(editingSetlistId, 'editing setlist ID in remove handler');
+      if (validatedSetlistId) {
+        const index = setlists.findIndex(s => s.id === validatedSetlistId);
+        if (index !== -1) {
+          setlists[index].songIds = validatedSongIds;
+          // Sanitize the entire setlists array before saving to localStorage
+          const sanitizedSetlists = setlists.map(setlist => ({
+            ...setlist,
+            songIds: Array.isArray(setlist.songIds) ? 
+              setlist.songIds.filter(id => validateAndFormatId(id, 'sanitizing song ID')) :
+              []
+          }));
+          // Save to localStorage
+          localStorage.setItem('setlistManager_setlists', JSON.stringify(sanitizedSetlists));
+        }
       }
     }
     
@@ -482,15 +652,32 @@ function addSongToSetlist(songId) {
     el.classList.remove('dragging');
     
     // Update the setlist data after reordering
-    const newSongIds = Array.from(container.children).map(ch => parseInt(ch.getAttribute('data-song-id')));
+    const newSongIds = Array.from(container.children).map(ch => ch.getAttribute('data-song-id'));
+    
+    // Validate song IDs before updating
+    const validatedSongIds = newSongIds.filter(id => {
+      if (!id) return false; // Skip null/undefined IDs
+      const validated = validateAndFormatId(id, 'song ID in dragend handler');
+      return validated !== null;
+    });
     
     // Update the setlist in the global setlists array
     if (editingSetlistId) {
-      const index = setlists.findIndex(s => s.id === editingSetlistId);
-      if (index !== -1) {
-        setlists[index].songIds = newSongIds;
-        // Save to localStorage
-        localStorage.setItem('setlistManager_setlists', JSON.stringify(setlists));
+      const validatedSetlistId = validateAndFormatId(editingSetlistId, 'editing setlist ID in dragend handler');
+      if (validatedSetlistId) {
+        const index = setlists.findIndex(s => s.id === validatedSetlistId);
+        if (index !== -1) {
+          setlists[index].songIds = validatedSongIds;
+          // Sanitize the entire setlists array before saving to localStorage
+          const sanitizedSetlists = setlists.map(setlist => ({
+            ...setlist,
+            songIds: Array.isArray(setlist.songIds) ? 
+              setlist.songIds.filter(id => validateAndFormatId(id, 'sanitizing song ID')) :
+              []
+          }));
+          // Save to localStorage
+          localStorage.setItem('setlistManager_setlists', JSON.stringify(sanitizedSetlists));
+        }
       }
     }
     
@@ -512,24 +699,60 @@ function addSongToSetlist(songId) {
   container.appendChild(el);
   
   // Update the setlist data in localStorage
-  const newSongIds = Array.from(container.children).map(ch => parseInt(ch.getAttribute('data-song-id')));
+  const newSongIds = Array.from(container.children).map(ch => ch.getAttribute('data-song-id'));
+  
+  // Validate song IDs before updating
+  const validatedSongIds = newSongIds.filter(id => {
+    if (!id) return false; // Skip null/undefined IDs
+    const validated = validateAndFormatId(id, 'song ID in addSongToSetlist');
+    return validated !== null;
+  });
   
   // Update the setlist in the global setlists array
   if (editingSetlistId) {
-    const index = setlists.findIndex(s => s.id === editingSetlistId);
-    if (index !== -1) {
-      setlists[index].songIds = newSongIds;
-      // Save to localStorage
-      localStorage.setItem('setlistManager_setlists', JSON.stringify(setlists));
+    const validatedSetlistId = validateAndFormatId(editingSetlistId, 'editing setlist ID in addSongToSetlist');
+    if (validatedSetlistId) {
+      const index = setlists.findIndex(s => s.id === validatedSetlistId);
+      if (index !== -1) {
+        setlists[index].songIds = validatedSongIds;
+        // Sanitize the entire setlists array before saving to localStorage
+        const sanitizedSetlists = setlists.map(setlist => ({
+          ...setlist,
+          songIds: Array.isArray(setlist.songIds) ? 
+            setlist.songIds.filter(id => validateAndFormatId(id, 'sanitizing song ID')) :
+            []
+        }));
+        // Save to localStorage
+        localStorage.setItem('setlistManager_setlists', JSON.stringify(sanitizedSetlists));
+      }
     }
   }
   
   // Refresh the available songs list to remove the added song
   renderAvailableSongs();
+  
+  console.log('Song added to setlist, new song IDs:', newSongIds);
 }
 
 // Duplicate setlist functionality
 async function duplicateSetlist(setlistId) {
+  console.log('Attempting to duplicate setlist with ID:', setlistId, 'Type:', typeof setlistId);
+  
+  // Ensure setlistId is a string (UUID)
+  const stringSetlistId = typeof setlistId === 'string' ? setlistId : String(setlistId);
+  
+  
+  // Validate the setlist ID
+  const validatedSetlistId = validateAndFormatId(stringSetlistId, 'setlist ID');
+  if (!validatedSetlistId) {
+    console.error('Failed to validate setlist ID:', setlistId);
+    alert('Invalid setlist ID format');
+    return;
+  }
+  
+  // Use the validated ID for the rest of the function
+  const finalSetlistId = validatedSetlistId;
+  
   try {
     if (!window.db) {
       throw new Error('Database not initialized');
@@ -545,10 +768,11 @@ async function duplicateSetlist(setlistId) {
     }
     
     // Get the original setlist and its songs
+    console.log('Fetching original setlist with validated ID:', finalSetlistId);
     const { data: originalSetlist, error: setlistError } = await window.db
       .from('setlists')
       .select('*')
-      .eq('id', setlistId)
+      .eq('id', finalSetlistId)
       .single();
     
     if (setlistError) {
@@ -561,7 +785,7 @@ async function duplicateSetlist(setlistId) {
     const { data: originalSetlistSongs, error: songsError } = await window.db
       .from('setlist_songs')
       .select('*')
-      .eq('setlist_id', setlistId)
+      .eq('setlist_id', finalSetlistId)
       .order('position', { ascending: true });
     
     if (songsError) {

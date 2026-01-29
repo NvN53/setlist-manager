@@ -23,8 +23,7 @@
                     </div>
                 </div>
                 <div class="search-box-container">
-                    <input type="text" placeholder="Search" class="search-box" id="song-search">
-                    <button class="clear-search-btn hidden" id="clear-song-search">✕</button>
+                    <input type="search" placeholder="Search" class="search-box" id="song-search" autocomplete="off" name="song_search_field" aria-label="Search songs" role="search">
                 </div>
                 <div class="tabs">
                     <div class="tab active" id="songs-tab">SONGS</div>
@@ -51,7 +50,7 @@
                     </div>
                 </div>
                 <div class="search-box-container">
-                    <input type="text" placeholder="Search" class="search-box" id="setlist-search">
+                    <input type="search" placeholder="Search" class="search-box" id="setlist-search" autocomplete="off" name="setlist_search_field" aria-label="Search setlists" role="search">
                     <button class="clear-search-btn hidden" id="clear-setlist-search">✕</button>
                 </div>
                 <div class="tabs">
@@ -106,7 +105,7 @@
             <div class="form-group">
                 <label>Add Songs</label>
                 <div class="search-box-container">
-                    <input type="text" placeholder="Search songs" class="search-box" id="add-song-search">
+                    <input type="search" placeholder="Search songs" class="search-box" id="add-song-search" autocomplete="off" name="add_song_search_field" aria-label="Search songs to add" role="search">
                     <button class="clear-search-btn hidden" id="clear-add-song-search">✕</button>
                 </div>
                 <div id="available-songs-list">
@@ -278,9 +277,10 @@
                 <div class="auth-container" style="padding: 20px;">
                     <h2>Account</h2>
                     <div id="auth-content">
-                        <div id="login-form">
-                            <input id="email" type="email" placeholder="Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-                            <input id="password" type="password" placeholder="Password" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                        <form id="login-form-element" name="login-form" action="#" method="post">
+                                                <div id="login-form">
+                            <input id="email" type="email" placeholder="Email" autocomplete="username" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                            <input id="password" type="password" placeholder="Password" autocomplete="current-password" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
                             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                                 <button id="signup" class="btn btn-primary" style="flex: 1; padding: 10px;">Sign Up</button>
                                 <button id="login" class="btn btn-secondary" style="flex: 1; padding: 10px;">Log In</button>
@@ -297,6 +297,7 @@
                     </div>
                 </div>
             </div>
+            </form>
         </div>
         
         <!-- Ambient Pad Modal -->

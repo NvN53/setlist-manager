@@ -87,18 +87,28 @@ function updateAuthUI(user) {
 
 // Show authentication page
 function showAuthPage() {
-    // Hide all other pages
-    document.getElementById('home-songs-page').classList.add('hidden');
-    document.getElementById('home-setlists-page').classList.add('hidden');
-    document.getElementById('edit-song-page').classList.add('hidden');
-    document.getElementById('edit-setlist-page').classList.add('hidden');
-    document.getElementById('view-setlist-page').classList.add('hidden');
-    document.getElementById('lyrics-page').classList.add('hidden');
-    document.getElementById('settings-page').classList.add('hidden');
-    document.getElementById('ambient-modal').classList.add('hidden');
+    // Hide all other pages with defensive null checks
+    const homeSongsPage = document.getElementById('home-songs-page');
+    const homeSetlistsPage = document.getElementById('home-setlists-page');
+    const editSongPage = document.getElementById('edit-song-page');
+    const editSetlistPage = document.getElementById('edit-setlist-page');
+    const viewSetlistPage = document.getElementById('view-setlist-page');
+    const lyricsPage = document.getElementById('lyrics-page');
+    const settingsPage = document.getElementById('settings-page');
+    const ambientModal = document.getElementById('ambient-modal');
+    
+    homeSongsPage?.classList.add('hidden');
+    homeSetlistsPage?.classList.add('hidden');
+    editSongPage?.classList.add('hidden');
+    editSetlistPage?.classList.add('hidden');
+    viewSetlistPage?.classList.add('hidden');
+    lyricsPage?.classList.add('hidden');
+    settingsPage?.classList.add('hidden');
+    ambientModal?.classList.add('hidden');
     
     // Show auth page
-    document.getElementById('auth-page').classList.remove('hidden');
+    const authPage = document.getElementById('auth-page');
+    authPage?.classList.remove('hidden');
 }
 
 // Login functionality
