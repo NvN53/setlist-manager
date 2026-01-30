@@ -11,317 +11,16 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <style>
-        * { box-sizing: border-box; margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
-        body { max-width:500px; margin:0 auto; padding:20px; background-color:#f5f5f5; color:#333; }
-        .app { background-color:white; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); padding:15px; min-height:90vh; overflow: hidden; }
-        .header { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #ddd; margin-bottom:10px; }
-        .header h1 { margin:0; font-size:1.5rem; }
-        .search-box { width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:6px; font-size:1rem; }
-        .clear-search-btn { position:absolute; right:10px; top:50%; transform:translateY(-50%) translateY(-5px); background:none; border:none; font-size:1.2rem; cursor:pointer; color:#999; }
-        .clear-search-btn:hover { color:#333; }
-        .tabs { display:flex; margin:10px 0; border-bottom:1px solid #ddd; }
-        .tab { flex:1; text-align:center; padding:12px; cursor:pointer; font-weight:bold; transition:all .3s; }
-        .tab.active { border-bottom:3px solid #007bff; color:#007bff; }
-        
-        /* Fixed header layout for home pages */
-        .home-header-fixed { position: sticky; top: 0; background: white; z-index: 10; padding: 10px 0 5px 0; }
-        .home-content-scrollable { height: calc(100vh - 200px); overflow-y: auto; padding: 10px 0; }
-        #lyrics-page .home-header-fixed { position: relative; /* NOT sticky */ background: white; z-index: 10; padding: 10px 0; }
-        #lyrics-page .home-content-scrollable { flex: 1; overflow-y: auto; padding: 10px 0; }
-        .song-item, .setlist-item { padding:15px 0; border-bottom:1px solid #eee; cursor:pointer; }
-        .song-item:hover, .setlist-item:hover { background-color:#f9f9f9; }
-        .song-title, .setlist-title { font-weight:bold; margin-bottom:5px; }
-        .song-details, .setlist-details { color:#666; font-size:.9rem; }
-                .song-actions, .setlist-actions { display: flex; gap: 5px; margin-top: 5px; }
-                .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
-        .setlist-song-item { padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .setlist-song-info { flex-grow: 1; }
-        .setlist-song-title { font-weight: bold; }
-        .setlist-song-details { font-size: 0.8rem; color: #666; }
-        .remove-song-btn { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.2rem; }
-        .view-setlist-song-item { padding: 15px 0; border-bottom: 1px solid #eee; cursor: pointer; }
-        .view-setlist-song-item:hover { background-color: #f9f9f9; }
-        .available-song-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .available-song-item:hover { background-color: #f9f9f9; }
-        .floating-button { position:fixed; bottom:30px; right:30px; width:60px; height:60px; border-radius:50%; background-color:#007bff; color:white; border:none; font-size:2rem; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.2); display:flex; justify-content:center; align-items:center; }
-        .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-        .menu-container { position: relative; }
-        .menu-icon { cursor: pointer; padding: 10px; }
-        .dropdown-menu { position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100; min-width: 150px; }
-        .menu-item { padding: 10px 15px; cursor: pointer; }
-        .menu-item:hover { background-color: #f5f5f5; }
-        .btn { padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:.8rem; transition:background-color .3s; }
-        .btn-primary { background-color:#007bff; color:white; }
-        .btn-secondary { background-color:#6c757d; color:white; }
-        .btn-danger { background-color:#dc3545; color:white; }
-        .form-group { margin-bottom:15px; text-align:left; }
-        .form-group label { display:block; margin-bottom:5px; font-weight:bold; }
-        .form-group input, .form-group select, .form-group textarea { width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:1rem; }
-        .form-row { display:flex; gap:10px; }
-        .form-row .form-group { flex:1; }
-        .textarea-lyrics { min-height: calc(100vh - 300px); font-family: 'Courier New', Courier, monospace; white-space: pre-wrap; overflow-x: hidden; word-wrap: break-word; }
-        .action-buttons { display:flex; gap:10px; margin-top:20px; }
-        .controls { display:flex; justify-content:space-between; align-items:center; margin:10px 0; flex-wrap:wrap; gap:10px; }
-        .transpose-controls { display:flex; align-items:center; gap:10px; }
-        .transpose-value { font-weight: bold; font-size: 1.1rem; min-width: 20px; text-align: center; }
-        .transpose-btn { width:30px; height:30px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.6rem; }
-        #metronome-toggle.btn.btn-secondary { background-color: #6c757d; color: white; border: none; cursor: pointer; padding: 5px 10px; border-radius: 4px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
-        
-        body.dark-mode #metronome-toggle.btn.btn-secondary { background-color: #444; color: #ffffff; border: none; }
-        
-        body.dark-mode #metronome-toggle.btn.btn-secondary.active { background: #007bff; color: white; border: 1px solid #007bff; }
-        #metronome-toggle.btn.btn-secondary:hover { background-color: #5a6268; }
-        #metronome-toggle.btn.btn-secondary.active { color: #007bff; border: 1px solid #007bff; background-color: transparent; }
-        .lyrics-container { text-align:left; white-space: pre-wrap; margin:10px 0; padding:5px 0; font-size:1rem; line-height:1.2; font-family: 'Courier New', Courier, monospace; color: inherit; overflow-x: hidden; word-wrap: break-word; }
+    <link rel="stylesheet" href="styles.css">
 
-        .lyrics-container:lang(ml) { font-size: 0.9rem; }
-        /* Token approach styling */
-        .token-row { line-height: 1; }
-        .chord-token { font-weight: bold; color: #007bff; }
-        .word-token { color: inherit; }
-        .chord-line { margin-bottom:5px; font-weight:bold; color:#007bff; font-family: 'Courier New', Courier, monospace; white-space: pre; }
-        .lyric-line { margin:5px 0 7px 0; line-height:1.2; font-family: 'Courier New', Courier, monospace; white-space: pre-wrap; font-size:1rem; color: inherit; overflow-x: hidden; word-wrap: break-word; }
-        .inline-chord-line .chord { background-color: rgba(0,123,255,0.1); padding:2px 4px; border-radius:3px; margin:0 2px; }
-        .metadata { color:#6c757d; font-style:italic; margin:10px 0; padding:5px; background-color:#f8f9fa; border-left:3px solid #007bff; }
-        .line-break { height:3px; }
-        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background-color:rgba(0,0,0,.5); display:flex; justify-content:center; align-items:center; z-index:1000; }
-        .modal-content { background:white; padding:20px; border-radius:8px; max-width:90%; max-height:90%; overflow-y:auto; width:400px; }
-        .pitch-btn { padding:8px 12px; margin:4px; border:1px solid #ddd; background:white; border-radius:4px; cursor:pointer; }
-        .pitch-btn.active { background-color:#007bff; color:white; }
-            .ambient-btn-container { display: flex; }
-        
-        /* Ambient pad modal styles */
-        #tap-to-hum { width: 100%; padding: 12px; margin-bottom: 15px; }
-        .mode-selection { display: flex; gap: 10px; }
-        .mode-option { flex: 1; text-align: center; }
-        
-        /* Close button styles */
-        .close-btn { 
-            background: none; 
-            border: none; 
-            font-size: 1.5rem; 
-            cursor: pointer; 
-            color: #333; 
-            padding: 0; 
-            width: auto; 
-            height: auto; 
-        }
-        
-        body.dark-mode .close-btn { 
-            color: #fff; 
-        }
-        .hidden { display:none; }
-        
-        /* Settings page styles */
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        /* Switch styles */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        /* Settings page positioning */
-        #settings-page {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            z-index: 1000;
-        }
-        
-        #settings-page:not(.hidden) {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        #settings-page .app {
-            max-width: 500px;
-            width: 100%;
-            height: 100%;
-            overflow-y: auto;
-            margin: 0 10px;
-        }
-        
 
         
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .slider {
-            background-color: #007bff;
-        }
-        
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        
-        @media(max-width:500px){ body { padding:10px; } .app{ padding:15px } .form-row { flex-direction:column; gap:0; } }
-        
-        /* Dark mode styles */
-        body.dark-mode {
-            background-color: #121212;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .app {
-            background-color: #1e1e1e;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .header {
-            border-bottom: 1px solid #444;
-        }
-        
-        body.dark-mode .search-box {
-            background-color: #2d2d2d;
-            border: 1px solid #444;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .tabs {
-            border-bottom: 1px solid #444;
-        }
-        
-        body.dark-mode .tab {
-            color: #cccccc;
-        }
-        
-        body.dark-mode .tab.active {
-            color: #ffffff;
-            border-bottom: 3px solid #007bff;
-        }
-        
-        body.dark-mode .song-item, 
-        body.dark-mode .setlist-item {
-            border-bottom: 1px solid #444;
-        }
-        
-        body.dark-mode .song-item:hover, 
-        body.dark-mode .setlist-item:hover {
-            background-color: #2d2d2d;
-        }
-        
-        body.dark-mode .view-setlist-song-item:hover {
-            background-color: #2d2d2d;
-        }
-        
-        body.dark-mode .song-details, 
-        body.dark-mode .setlist-details {
-            color: #aaaaaa;
-        }
-        
-        body.dark-mode .form-group input, 
-        body.dark-mode .form-group select, 
-        body.dark-mode .form-group textarea {
-            background-color: #2d2d2d;
-            border: 1px solid #444;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .btn-secondary {
-            background-color: #444;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .btn-primary {
-            background-color: #007bff;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .btn-danger {
-            background-color: #dc3545;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .setting-item {
-            border-bottom: 1px solid #444;
-        }
-        
-        body.dark-mode .slider {
-            background-color: #444;
-        }
-        
-        body.dark-mode input:checked + .slider {
-            background-color: #007bff;
-        }
-        
-        body.dark-mode .home-header-fixed {
-            background: #1e1e1e;
-        }
-        
-        body.dark-mode #lyrics-page .home-header-fixed {
-            background: #1e1e1e;
-        }
-        
-        body.dark-mode .dropdown-menu {
-            background-color: #2d2d2d;
-            border: 1px solid #444;
-        }
-        
-        body.dark-mode .menu-item:hover {
-            background-color: #444;
-        }
-        
-        body.dark-mode .modal-content {
-            background-color: #2d2d2d;
-            color: #ffffff;
-        }
-        
-        body.dark-mode .pitch-btn {
-            background-color: #444;
-            color: #ffffff;
-            border: 1px solid #555;
-        }
-        
-        body.dark-mode .pitch-btn.active {
-            background-color: #007bff;
-        }
-        
-        body.dark-mode #settings-page {
-            background: #1e1e1e;
-        }
-    </style>
-</head>
+
+
+
+
+
+
 <body>
     <div class="app">
         <!-- Home Page - Songs -->
@@ -504,7 +203,7 @@
                     <button class="btn btn-secondary" id="next-song-btn" style="display: none;">Next <i class="fas fa-arrow-right"></i></button>
                 </div>
 
-                <div class="song-details" id="lyrics-details" style="margin: 5px 0;">Key • BPM bpm</div>
+                <div class="song-details" id="lyrics-details" style="margin: 5px 0;">Key � BPM bpm</div>
 
                 <div class="controls">
                     <div class="main-controls" style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
@@ -788,7 +487,7 @@ let oldSongs = JSON.parse(localStorage.getItem('setlistManager_songs')) || [
     { id: 3, title: 'Ente Daivame', key: 'Fm', bpm: 92, timeSig: '4/4', lyrics: 'Fm              C\nEnte daivame nee thanne\nFm              C\nEnte sakhavum nee thanne\nDm              Fm\nEnte snehithanum nee thanne\nC               Fm\nEnikku vendiyavanum nee thanne' }
 ];
 let setlists = JSON.parse(localStorage.getItem('setlistManager_setlists')) || [
-    { id: 1, title: 'Sunday Service â?" Jan 12', songIds: [1, 2] },
+    { id: 1, title: 'Sunday Service �?" Jan 12', songIds: [1, 2] },
     { id: 2, title: 'Christmas Eve Mass', songIds: [2, 3] },
     { id: 3, title: 'Malayalam Choir Practice', songIds: [3, 1] }
 ];
@@ -1119,7 +818,7 @@ let detectionStartTime = null;
 let stablePitchDetected = false;
 const PITCH_DETECTION_WINDOW = 1000; // Collect estimates for 1 second
 const STABLE_DURATION_MS = 300; // Require stability for 300ms
-const CENT_TOLERANCE = 30; // A±30 cents tolerance
+const CENT_TOLERANCE = 30; // A�30 cents tolerance
 const MIN_AMPLITUDE = 0.01; // Minimum amplitude to consider a signal
 
 // Function to start pitch detection
@@ -1695,10 +1394,10 @@ document.getElementById('delete-setlist-btn').addEventListener('click', deleteSe
         }
     });
     
-    document.getElementById('ambient-dropdown').addEventListener('click', function() {
-        // Show the ambient pad window
-        showAmbientPad();
-    });
+    // Ambient dropdown event listener is handled in main.js
+    // document.getElementById('ambient-dropdown').addEventListener('click', function() {
+    //     showAmbientPad();
+    // });
 document.getElementById('close-ambient-modal').addEventListener('click', hideAmbientPad);
 
 // Tap to hum functionality
@@ -2126,11 +1825,11 @@ function showLyricsPage(song) {
     currentSong = songs.find(s => s.id === song.id) || song;
     console.log('Setting currentSong to:', currentSong);
     document.getElementById('lyrics-title').textContent = currentSong.title;
-    document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
+    document.getElementById('lyrics-details').textContent = `${currentSong.key} � ${currentSong.bpm} bpm`;
     
     // Set language attribute for Malayalam songs
     const lyricsContainer = document.getElementById('lyrics-content');
-    if (currentSong.title.includes('Malayalam') || /[ഀ-ൿ]/.test(currentSong.lyrics)) {
+    if (currentSong.title.includes('Malayalam') || /[?-?]/.test(currentSong.lyrics)) {
         lyricsContainer.setAttribute('lang', 'ml');
     } else {
         lyricsContainer.removeAttribute('lang');
@@ -2177,11 +1876,11 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
     
     currentSong = songs.find(s => s.id === song.id) || song;
     document.getElementById('lyrics-title').textContent = currentSong.title;
-    document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
+    document.getElementById('lyrics-details').textContent = `${currentSong.key} � ${currentSong.bpm} bpm`;
     
     // Set language attribute for Malayalam songs
     const lyricsContainer = document.getElementById('lyrics-content');
-    if (currentSong.title.includes('Malayalam') || /[ഀ-ൿ]/.test(currentSong.lyrics)) {
+    if (currentSong.title.includes('Malayalam') || /[?-?]/.test(currentSong.lyrics)) {
         lyricsContainer.setAttribute('lang', 'ml');
     } else {
         lyricsContainer.removeAttribute('lang');
@@ -2220,8 +1919,10 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
     window.currentSetlistContext = { songIds, currentIndex };
 }
 function showAmbientPad(){ 
+    console.log('showAmbientPad called');
     // Show the ambient pad modal
     ambientModal.classList.remove('hidden'); 
+    ambientModal.style.display = 'flex'; // Ensure it's visible
     
     // Highlight the currently active pitch if the ambient pad is playing
     if (currentPadPitch && ambientPad && ambientPad.playing) {
@@ -2248,9 +1949,11 @@ function showAmbientPad(){
     }
 }
 function hideAmbientPad(){ 
+    console.log('hideAmbientPad called');
     // Don't stop the ambient pad when modal is closed
     // Only hide the modal
     ambientModal.classList.add('hidden'); 
+    ambientModal.style.display = 'none'; // Ensure it's hidden
 }
 
 function showAuthPage() {
@@ -2336,7 +2039,7 @@ function navigateToNextSong() {
 
 /* ---------- small utilities ---------- */
 function isChordToken(tok) {
-    return /^[A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?$/.test(tok);
+    return /^[A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A�)?(\/[A-G][#b]?)?$/.test(tok);
 }
 
 /* ---------- rendering lists ---------- */
@@ -2346,7 +2049,7 @@ function renderSongsList(filteredSongs = null) {
     songsList.innerHTML = songsToRender.map(song => `
         <div class="song-item" data-id="${song.id}" data-user-id="${song.user_id}">
             <div class="song-title">${song.title}</div>
-            <div class="song-details">${song.key} • ${song.bpm} bpm</div>
+            <div class="song-details">${song.key} � ${song.bpm} bpm</div>
         </div>
     `).join('');
     
@@ -2735,7 +2438,7 @@ function transposeLyrics(steps) {
     const currentIndex = noteIndex[baseNote]; if (currentIndex === undefined) return;
     const newIndex = (currentIndex + steps + 12) % 12; const newNote = notes[newIndex];
     currentSong.key = newNote + suffix;
-    document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
+    document.getElementById('lyrics-details').textContent = `${currentSong.key} � ${currentSong.bpm} bpm`;
     currentSong.lyrics = transposeLyricsContent(currentSong.lyrics, steps, noteIndex, notes);
     document.getElementById('lyrics-content').innerHTML = renderLyricsWithChords(currentSong.lyrics);
     console.log(`Transposed key to ${newNote}${suffix}`);
@@ -2745,15 +2448,15 @@ function transposeLyricsContent(lyrics, steps, noteIndex, notes) {
     if (!lyrics) return lyrics;
     return lyrics.split('\n').map(line => {
         if (line.includes('[') && line.includes(']')) {
-            return line.replace(/\[([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?)\]/g, (m,chord) => {
+            return line.replace(/\[([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A�)?(\/[A-G][#b]?)?)\]/g, (m,chord) => {
                 return `[${transposeSingleChord(chord, noteIndex, notes, steps)}]`;
             });
         } else if (line.includes('(') && line.includes(')')) {
-            return line.replace(/\(([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?)\)/g, (m,chord) => {
+            return line.replace(/\(([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A�)?(\/[A-G][#b]?)?)\)/g, (m,chord) => {
                 return `(${transposeSingleChord(chord, noteIndex, notes, steps)})`;
             });
-        } else if (/^([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?\s*)+$/.test(line.trim())) {
-            return line.replace(/([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A°)?(\/[A-G][#b]?)?)/g, (m) => transposeSingleChord(m, noteIndex, notes, steps));
+        } else if (/^([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A�)?(\/[A-G][#b]?)?\s*)+$/.test(line.trim())) {
+            return line.replace(/([A-G][#b]?(m|dim|aug|sus|Maj|min|\+|A�)?(\/[A-G][#b]?)?)/g, (m) => transposeSingleChord(m, noteIndex, notes, steps));
         }
         return line;
     }).join('\n');
@@ -3295,7 +2998,7 @@ function renderViewSetlistSongs(songIds) {
 
     el.innerHTML = `
       <div class="song-title">${escapeHtml(song.title)}</div>
-      <div class="song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
+      <div class="song-details">${escapeHtml(song.key)} � ${song.bpm} bpm</div>
     `;
 
     el.addEventListener('click', () => {
@@ -3322,10 +3025,10 @@ function renderSetlistSongs(songIds) {
 
     el.innerHTML = `
       <div class="setlist-song-info" style="display:flex;align-items:center;gap:10px;">
-        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;">â~°</span>
+        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;">�~�</span>
         <div style="min-width:0">
           <div class="setlist-song-title">${escapeHtml(song.title)}</div>
-          <div class="setlist-song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
+          <div class="setlist-song-details">${escapeHtml(song.key)} � ${song.bpm} bpm</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -3459,7 +3162,7 @@ function renderAvailableSongs(filteredSongs = null) {
   container.innerHTML = songsToRender.map(song => `
       <div class="available-song-item" data-song-id="${song.id}">
           <div class="song-title">${escapeHtml(song.title)}</div>
-          <div class="song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
+          <div class="song-details">${escapeHtml(song.key)} � ${song.bpm} bpm</div>
       </div>
   `).join('');
 
@@ -3876,7 +3579,7 @@ function initSupabase() {
       const addSongBtn = document.getElementById('add-song-btn');
       if (addSongBtn) addSongBtn.style.display = "block";
       
-      status.textContent = `✅ Logged in as ${user.email}`;
+      status.textContent = `? Logged in as ${user.email}`;
       status.style.display = "block";
     } else {
       // User is not logged in
@@ -3900,7 +3603,7 @@ function initSupabase() {
       if (window.db) {
         await window.db.auth.signOut();
       }
-      status.textContent = "👋 Logged out";
+      status.textContent = "?? Logged out";
       status.style.display = "block";
       
       // Update UI to show login form
@@ -3920,7 +3623,7 @@ function initSupabase() {
     const password = document.getElementById("password").value;
 
     if (!email || !password) {
-      status.textContent = "â?O Please enter both email and password";
+      status.textContent = "�?O Please enter both email and password";
       status.style.display = "block";
       return;
     }
@@ -3931,8 +3634,8 @@ function initSupabase() {
     });
 
     status.textContent = error
-      ? "❌ " + error.message
-      : "✅ Signup successful (check email if required)";
+      ? "? " + error.message
+      : "? Signup successful (check email if required)";
     status.style.display = "block";
   };
 
@@ -3942,7 +3645,7 @@ function initSupabase() {
     const password = document.getElementById("password").value;
 
     if (!email || !password) {
-      status.textContent = "â?O Please enter both email and password";
+      status.textContent = "�?O Please enter both email and password";
       status.style.display = "block";
       return;
     }
@@ -3953,15 +3656,15 @@ function initSupabase() {
     });
 
     status.textContent = error
-      ? "❌ " + error.message
-      : "✅ Logged in as " + data.user.email;
+      ? "? " + error.message
+      : "? Logged in as " + data.user.email;
     status.style.display = "block";
   };
 
   // Logout functionality
   document.getElementById("logout").onclick = async () => {
     await window.db.auth.signOut();
-    status.textContent = "👋 Logged out";
+    status.textContent = "?? Logged out";
     status.style.display = "block";
   };
 
@@ -4120,5 +3823,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+<script src="main.js"></script>
+<script src="setlists.js"></script>
+<script src="auth.js"></script>
+<script src="utils.js"></script>
 </body>
 </html>
