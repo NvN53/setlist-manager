@@ -170,8 +170,29 @@ function initializeEventListeners() {
         songsTab.addEventListener('click', function() {
             document.querySelector('.tab.active').classList.remove('active');
             this.classList.add('active');
-            document.getElementById('home-songs-page').classList.remove('hidden');
-            document.getElementById('home-setlists-page').classList.add('hidden');
+            
+            // Hide all pages with defensive null checks
+            const homeSongsPage = document.getElementById('home-songs-page');
+            const homeSetlistsPage = document.getElementById('home-setlists-page');
+            const editSongPage = document.getElementById('edit-song-page');
+            const editSetlistPage = document.getElementById('edit-setlist-page');
+            const viewSetlistPage = document.getElementById('view-setlist-page');
+            const lyricsPage = document.getElementById('lyrics-page');
+            const settingsPage = document.getElementById('settings-page');
+            const ambientModal = document.getElementById('ambient-modal');
+            const authPage = document.getElementById('auth-page');
+            
+            homeSongsPage?.classList.remove('hidden');
+            homeSetlistsPage?.classList.add('hidden');
+            editSongPage?.classList.add('hidden');
+            editSetlistPage?.classList.add('hidden');
+            viewSetlistPage?.classList.add('hidden');
+            lyricsPage?.classList.add('hidden');
+            settingsPage?.classList.add('hidden');
+            ambientModal?.classList.add('hidden');
+            
+            // Make sure auth page is hidden
+            authPage?.classList.add('hidden');
         });
     }
     
@@ -181,8 +202,29 @@ function initializeEventListeners() {
         setlistsTab.addEventListener('click', function() {
             document.querySelector('.tab.active').classList.remove('active');
             this.classList.add('active');
-            document.getElementById('home-songs-page').classList.add('hidden');
-            document.getElementById('home-setlists-page').classList.remove('hidden');
+            
+            // Hide all pages with defensive null checks
+            const homeSongsPage = document.getElementById('home-songs-page');
+            const homeSetlistsPage = document.getElementById('home-setlists-page');
+            const editSongPage = document.getElementById('edit-song-page');
+            const editSetlistPage = document.getElementById('edit-setlist-page');
+            const viewSetlistPage = document.getElementById('view-setlist-page');
+            const lyricsPage = document.getElementById('lyrics-page');
+            const settingsPage = document.getElementById('settings-page');
+            const ambientModal = document.getElementById('ambient-modal');
+            const authPage = document.getElementById('auth-page');
+            
+            homeSongsPage?.classList.add('hidden');
+            homeSetlistsPage?.classList.remove('hidden');
+            editSongPage?.classList.add('hidden');
+            editSetlistPage?.classList.add('hidden');
+            viewSetlistPage?.classList.add('hidden');
+            lyricsPage?.classList.add('hidden');
+            settingsPage?.classList.add('hidden');
+            ambientModal?.classList.add('hidden');
+            
+            // Make sure auth page is hidden
+            authPage?.classList.add('hidden');
         });
     }
     
@@ -192,8 +234,29 @@ function initializeEventListeners() {
         backToSongsTab.addEventListener('click', function() {
             document.querySelector('.tab.active').classList.remove('active');
             document.getElementById('songs-tab').classList.add('active');
-            document.getElementById('home-songs-page').classList.remove('hidden');
-            document.getElementById('home-setlists-page').classList.add('hidden');
+            
+            // Hide all pages with defensive null checks
+            const homeSongsPage = document.getElementById('home-songs-page');
+            const homeSetlistsPage = document.getElementById('home-setlists-page');
+            const editSongPage = document.getElementById('edit-song-page');
+            const editSetlistPage = document.getElementById('edit-setlist-page');
+            const viewSetlistPage = document.getElementById('view-setlist-page');
+            const lyricsPage = document.getElementById('lyrics-page');
+            const settingsPage = document.getElementById('settings-page');
+            const ambientModal = document.getElementById('ambient-modal');
+            const authPage = document.getElementById('auth-page');
+            
+            homeSongsPage?.classList.remove('hidden');
+            homeSetlistsPage?.classList.add('hidden');
+            editSongPage?.classList.add('hidden');
+            editSetlistPage?.classList.add('hidden');
+            viewSetlistPage?.classList.add('hidden');
+            lyricsPage?.classList.add('hidden');
+            settingsPage?.classList.add('hidden');
+            ambientModal?.classList.add('hidden');
+            
+            // Make sure auth page is hidden
+            authPage?.classList.add('hidden');
         });
     }
     
@@ -203,8 +266,29 @@ function initializeEventListeners() {
         setlistsTabActive.addEventListener('click', function() {
             document.querySelector('.tab.active').classList.remove('active');
             this.classList.add('active');
-            document.getElementById('home-songs-page').classList.add('hidden');
-            document.getElementById('home-setlists-page').classList.remove('hidden');
+            
+            // Hide all pages with defensive null checks
+            const homeSongsPage = document.getElementById('home-songs-page');
+            const homeSetlistsPage = document.getElementById('home-setlists-page');
+            const editSongPage = document.getElementById('edit-song-page');
+            const editSetlistPage = document.getElementById('edit-setlist-page');
+            const viewSetlistPage = document.getElementById('view-setlist-page');
+            const lyricsPage = document.getElementById('lyrics-page');
+            const settingsPage = document.getElementById('settings-page');
+            const ambientModal = document.getElementById('ambient-modal');
+            const authPage = document.getElementById('auth-page');
+            
+            homeSongsPage?.classList.add('hidden');
+            homeSetlistsPage?.classList.remove('hidden');
+            editSongPage?.classList.add('hidden');
+            editSetlistPage?.classList.add('hidden');
+            viewSetlistPage?.classList.add('hidden');
+            lyricsPage?.classList.add('hidden');
+            settingsPage?.classList.add('hidden');
+            ambientModal?.classList.add('hidden');
+            
+            // Make sure auth page is hidden
+            authPage?.classList.add('hidden');
         });
     }
     

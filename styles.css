@@ -1,22 +1,30 @@
 /* Core Styles */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f8f9fa; color: #333; }
-.app { max-width: 500px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); overflow: hidden; }
-.hidden { display: none; }
-.header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #eee; }
-.search-box-container { position: relative; padding: 0 20px 15px 20px; }
+* { box-sizing: border-box; margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+body { max-width:500px; margin:0 auto; padding:20px; background-color:#f5f5f5; color:#333; }
+.app { background-color:white; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); padding:15px; min-height:90vh; overflow: hidden; }
+.hidden { display: none !important; }
+.header { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #ddd; margin-bottom:10px; }
+.header h1 { margin:0; font-size:1.5rem; }
+.search-box-container { position: relative; padding: 0 0 15px 0; }
 .search-box { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
 .clear-search-btn { position: absolute; right: 25px; top: 50%; transform: translateY(-50%) translateY(-5px); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #999; }
 .clear-search-btn:hover { color: #333; }
-.tabs { display: flex; margin: 10px 20px; border-bottom: 1px solid #ddd; }
-.tab { flex: 1; text-align: center; padding: 12px; cursor: pointer; font-weight: bold; transition: all .3s; }
-.tab.active { border-bottom: 3px solid #007bff; color: #007bff; }
+.tabs { display:flex; margin:10px 0; border-bottom:1px solid #ddd; }
+.tab { flex:1; text-align:center; padding:12px; cursor:pointer; font-weight:bold; transition:all .3s; }
+.tab.active { border-bottom:3px solid #007bff; color:#007bff; }
 
 /* Fixed header layout for home pages */
 .home-header-fixed { position: sticky; top: 0; background: white; z-index: 10; padding: 10px 0 5px 0; }
-.home-content-scrollable { height: calc(100vh - 200px); overflow-y: auto; padding: 10px 20px; }
+.home-content-scrollable { height: calc(100vh - 200px); overflow-y: auto; padding: 10px 0; }
+/* Lyrics page */
+#lyrics-page { display: flex; flex-direction: column; height: 100%; }
+#lyrics-page:not(.hidden) { display: flex; }
 #lyrics-page .home-header-fixed { position: relative; background: white; z-index: 10; padding: 10px 0; }
 #lyrics-page .home-content-scrollable { flex: 1; overflow-y: auto; padding: 10px 20px; }
+
+/* Main page containers */
+#home-songs-page, #home-setlists-page { display: flex; flex-direction: column; height: 100%; }
+#home-songs-page:not(.hidden), #home-setlists-page:not(.hidden) { display: flex; }
 .song-item, .setlist-item { padding: 15px 0; border-bottom: 1px solid #eee; cursor: pointer; }
 .song-item:hover, .setlist-item:hover { background-color: #f9f9f9; }
 .song-title, .setlist-title { font-weight: bold; margin-bottom: 5px; }
