@@ -58,6 +58,12 @@ function renderSongsList(filteredSongs = null) {
         <div class="song-item" data-id="${song.id}" data-user-id="${song.user_id}">
             <div class="song-title">${song.title}</div>
             <div class="song-details">${song.key} • ${song.bpm} bpm</div>
+            <div class="menu-container">
+                <i class="fas fa-ellipsis-v menu-icon"></i>
+                <div class="dropdown-menu hidden">
+                    <!-- Menu items will be added dynamically -->
+                </div>
+            </div>
         </div>
     `).join('');
     
@@ -145,21 +151,26 @@ async function updateSongActionButtons() {
     // Clear existing buttons
     actionsContainer.innerHTML = '';
     
-    // Add buttons based on conditions
-    if (isLoggedIn && !isOwner) {
-      const duplicateBtn = document.createElement('button');
-      duplicateBtn.className = 'btn btn-sm btn-secondary duplicate-song-btn';
-      duplicateBtn.textContent = 'Duplicate';
-      duplicateBtn.dataset.songId = songId;
-      actionsContainer.appendChild(duplicateBtn);
-    }
-    
-    if (isOwner) {
-      const editBtn = document.createElement('button');
-      editBtn.className = 'btn btn-sm btn-warning edit-song-btn';
-      editBtn.textContent = 'Edit';
-      editBtn.dataset.songId = songId;
-      actionsContainer.appendChild(editBtn);
+    // Update the dropdown menu for this song
+    const dropdownMenu = item.querySelector('.dropdown-menu');
+    if (dropdownMenu) {
+        if (isLoggedIn && isOwner) {
+            // Owner - show edit and delete options
+            dropdownMenu.innerHTML = `
+                <div class="menu-item edit-song-menu-item" data-song-id="${songId}">Edit Song</div>
+                <div class="menu-item delete-song-menu-item" data-song-id="${songId}">Delete Song</div>
+            `;
+        } else if (isLoggedIn && !isOwner) {
+            // Logged in but not owner - show duplicate option
+            dropdownMenu.innerHTML = `
+                <div class="menu-item duplicate-song-menu-item" data-song-id="${songId}">Duplicate Song</div>
+            `;
+        } else {
+            // Not logged in - show login option
+            dropdownMenu.innerHTML = `
+                <div class="menu-item login-song-menu-item" data-song-id="${songId}">Log In to Edit</div>
+            `;
+        }
     }
   }
 }

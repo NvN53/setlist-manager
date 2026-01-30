@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <title>SetDesk</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007bff">
     <link rel="apple-touch-icon" href="assets/icon-192.svg">
@@ -27,7 +27,7 @@
         <div id="home-songs-page">
             <div class="home-header-fixed">
                 <div class="header">
-                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.5</span></h1>
+                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.5.1</span></h1>
                     <div class="menu-container">
                         <i class="fas fa-ellipsis-v menu-icon"></i>
                         <div class="dropdown-menu hidden">
@@ -55,7 +55,7 @@
         <div id="home-setlists-page" class="hidden">
             <div class="home-header-fixed">
                 <div class="header">
-                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.5</span></h1>
+                    <h1>SetDesk <span class="version-text" style="font-size: 0.7em; color: #6c757d; font-weight: normal;">v1.5.1</span></h1>
                     <div class="menu-container">
                         <i class="fas fa-ellipsis-v menu-icon"></i>
                         <div class="dropdown-menu hidden">
@@ -203,7 +203,7 @@
                     <button class="btn btn-secondary" id="next-song-btn" style="display: none;">Next <i class="fas fa-arrow-right"></i></button>
                 </div>
 
-                <div class="song-details" id="lyrics-details" style="margin: 5px 0;">Key � BPM bpm</div>
+                <div class="song-details" id="lyrics-details" style="margin: 5px 0;">Key • BPM bpm</div>
 
                 <div class="controls">
                     <div class="main-controls" style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
@@ -1665,6 +1665,51 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Handle individual song menu items
+        if (e.target.classList.contains('edit-song-menu-item')) {
+            const songId = e.target.getAttribute('data-song-id');
+            const song = songs.find(s => s.id == songId);
+            if (song) {
+                editSong(song);
+            }
+            // Close the menu
+            e.target.closest('.dropdown-menu').classList.add('hidden');
+        }
+        
+        if (e.target.classList.contains('delete-song-menu-item')) {
+            const songId = e.target.getAttribute('data-song-id');
+            const song = songs.find(s => s.id == songId);
+            if (song) {
+                editingSongId = song.id;
+                deleteSong();
+            }
+            // Close the menu
+            e.target.closest('.dropdown-menu').classList.add('hidden');
+        }
+        
+        if (e.target.classList.contains('duplicate-song-menu-item')) {
+            const songId = e.target.getAttribute('data-song-id');
+            const song = songs.find(s => s.id == songId);
+            if (song) {
+                // Create a copy with "(Copy)" appended to title
+                const newSong = {
+                    ...song,
+                    id: Date.now(), // New ID
+                    title: song.title + ' (Copy)',
+                    user_id: null // Will be set when saved
+                };
+                showEditSongPage(newSong);
+            }
+            // Close the menu
+            e.target.closest('.dropdown-menu').classList.add('hidden');
+        }
+        
+        if (e.target.classList.contains('login-song-menu-item')) {
+            showAuthPage();
+            // Close the menu
+            e.target.closest('.dropdown-menu').classList.add('hidden');
+        }
+        
         // Handle setlists page menu
         if (e.target.closest('#home-setlists-page .menu-icon')) {
             e.stopPropagation();
@@ -1825,7 +1870,7 @@ function showLyricsPage(song) {
     currentSong = songs.find(s => s.id === song.id) || song;
     console.log('Setting currentSong to:', currentSong);
     document.getElementById('lyrics-title').textContent = currentSong.title;
-    document.getElementById('lyrics-details').textContent = `${currentSong.key} � ${currentSong.bpm} bpm`;
+    document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
     
     // Set language attribute for Malayalam songs
     const lyricsContainer = document.getElementById('lyrics-content');
@@ -1876,7 +1921,7 @@ function showLyricsPageFromSetlist(song, songIds, currentIndex) {
     
     currentSong = songs.find(s => s.id === song.id) || song;
     document.getElementById('lyrics-title').textContent = currentSong.title;
-    document.getElementById('lyrics-details').textContent = `${currentSong.key} � ${currentSong.bpm} bpm`;
+    document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
     
     // Set language attribute for Malayalam songs
     const lyricsContainer = document.getElementById('lyrics-content');
@@ -2049,7 +2094,7 @@ function renderSongsList(filteredSongs = null) {
     songsList.innerHTML = songsToRender.map(song => `
         <div class="song-item" data-id="${song.id}" data-user-id="${song.user_id}">
             <div class="song-title">${song.title}</div>
-            <div class="song-details">${song.key} � ${song.bpm} bpm</div>
+            <div class="song-details">${song.key} • ${song.bpm} bpm</div>
         </div>
     `).join('');
     
@@ -2438,7 +2483,7 @@ function transposeLyrics(steps) {
     const currentIndex = noteIndex[baseNote]; if (currentIndex === undefined) return;
     const newIndex = (currentIndex + steps + 12) % 12; const newNote = notes[newIndex];
     currentSong.key = newNote + suffix;
-    document.getElementById('lyrics-details').textContent = `${currentSong.key} � ${currentSong.bpm} bpm`;
+    document.getElementById('lyrics-details').textContent = `${currentSong.key} • ${currentSong.bpm} bpm`;
     currentSong.lyrics = transposeLyricsContent(currentSong.lyrics, steps, noteIndex, notes);
     document.getElementById('lyrics-content').innerHTML = renderLyricsWithChords(currentSong.lyrics);
     console.log(`Transposed key to ${newNote}${suffix}`);
@@ -2998,7 +3043,7 @@ function renderViewSetlistSongs(songIds) {
 
     el.innerHTML = `
       <div class="song-title">${escapeHtml(song.title)}</div>
-      <div class="song-details">${escapeHtml(song.key)} � ${song.bpm} bpm</div>
+      <div class="song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
     `;
 
     el.addEventListener('click', () => {
@@ -3025,10 +3070,10 @@ function renderSetlistSongs(songIds) {
 
     el.innerHTML = `
       <div class="setlist-song-info" style="display:flex;align-items:center;gap:10px;">
-        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;">�~�</span>
+        <span class="drag-handle" title="Drag to reorder" style="cursor:grab;">☰</span>
         <div style="min-width:0">
           <div class="setlist-song-title">${escapeHtml(song.title)}</div>
-          <div class="setlist-song-details">${escapeHtml(song.key)} � ${song.bpm} bpm</div>
+          <div class="setlist-song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -3162,7 +3207,7 @@ function renderAvailableSongs(filteredSongs = null) {
   container.innerHTML = songsToRender.map(song => `
       <div class="available-song-item" data-song-id="${song.id}">
           <div class="song-title">${escapeHtml(song.title)}</div>
-          <div class="song-details">${escapeHtml(song.key)} � ${song.bpm} bpm</div>
+          <div class="song-details">${escapeHtml(song.key)} • ${song.bpm} bpm</div>
       </div>
   `).join('');
 
